@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "Libro.fm ALC Checker",
+  "version": "1.0",
+  "description": "Greys out ALCs you already own in your library.",
+  "permissions": [],
+  "content_scripts": [
+    {
+      "matches": ["*://*.libro.fm/playlists/alc*"],
+      "js": ["content.js"],
+      "css": ["styles.css"]
+    }
+  ]
+}

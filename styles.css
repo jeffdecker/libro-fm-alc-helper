@@ -1,0 +1,76 @@
+/* === UI Overlay Box === */
+#alc-checker-overlay {
+    position: fixed;
+    top: 120px; /* <-- CHANGED: Pushed down ~100 pixels */
+    right: 20px;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 15px 20px;
+    border-radius: 8px;
+    z-index: 999999;
+    font-family: sans-serif;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    pointer-events: none; /* Allows clicking through the box */
+}
+
+#alc-checker-overlay .status-text {
+    font-weight: bold;
+    margin-bottom: 5px;
+    font-size: 14px;
+}
+
+#alc-checker-overlay .count-text {
+    font-size: 12px;
+    color: #cccccc;
+}
+
+/* === Grey out owned books === */
+.already-owned-alc {
+    position: relative;
+    pointer-events: none; /* Prevents clicking on the owned book */
+}
+
+/* Dim the book contents, but NOT the badge */
+.already-owned-alc > * {
+    filter: grayscale(100%);
+    opacity: 0.4;
+}
+
+/* Badge overlay for owned books */
+.already-owned-alc::after {
+    content: "Already in Library";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: #000000; /* Solid Black */
+    color: #ffffff;            /* Solid White */
+    padding: 20px 30px;        /* Increased padding */
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 24px;           /* Increased font size */
+    text-align: center;
+    z-index: 10;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.6); /* Adds a nice shadow to make it pop */
+}
+
+/* === Reload Button === */
+.reload-btn {
+    display: none; /* Hidden while the library is loading */
+    margin-top: 10px;
+    background-color: #ffffff;
+    color: #000000;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 10px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 12px;
+    pointer-events: auto; /* Lets us click the button even though the parent box is click-through! */
+    transition: background-color 0.2s;
+    width: 100%;
+}
+
+.reload-btn:hover {
+    background-color: #dddddd;
+}
