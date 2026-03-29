@@ -59,6 +59,16 @@ if (cacheStr) {
 }
 ```
 
+* Clear the recently loaded ALCs and their genres
+```
+localStorage.removeItem('libro_genres_cache');
+```
+
+* Output the recently loaded ALCs and their genres
+```
+console.table(JSON.parse(localStorage.getItem('libro_genres_cache') || '{}'));
+```
+
 ## 🤝 Contributing
 Feel free to open an issue or submit a pull request if you have ideas for improvements, better CSS styling, or bug fixes!
 

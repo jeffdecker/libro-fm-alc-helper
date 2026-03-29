@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Libro.fm ALC Checker",
   "version": "1.0",
-  "description": "Greys out ALCs you already own in your library.",
+  "description": "Lets you know if you already own an audiobook on the monthly ALC list, and adds genre information to each book on the ALC list.",
   "permissions": [],
   "content_scripts": [
     {
