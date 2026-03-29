@@ -24,6 +24,12 @@
     color: #cccccc;
 }
 
+#alc-checker-overlay .genre-text {
+    font-size: 11px;
+    color: #cccccc;
+    margin-top: 4px;
+}
+
 /* === Grey out owned books === */
 .already-owned-alc {
     position: relative;

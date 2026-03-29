@@ -36,7 +36,7 @@ function createOverlay() {
     overlayEl.innerHTML = `
         <div class="status-text">Initializing...</div>
         <div class="count-text">Loaded: 0 books</div>
-        <div class="genre-text" style="font-size: 11px; color: #666; margin-top: 4px;"></div>
+        <div class="genre-text"></div>
         <button id="alc-reload-btn" class="reload-btn" title="Force refresh library cache">↻ Refresh Library</button>
     `;
     document.body.appendChild(overlayEl);
