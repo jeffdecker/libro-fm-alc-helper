@@ -48,13 +48,14 @@ localStorage.removeItem('libro_owned_books_cache');
 * Output library titles stored in cache
 
 ```
-var cacheStr = localStorage.getItem('libro_owned_books_cache');
+let cacheStr = localStorage.getItem('libro_owned_books_cache');
 if (cacheStr) {
-    var cacheData = JSON.parse(cacheStr);
-    console.log(`Here are your ${cacheData.titles.length} cached books:`);
-    console.table(cacheData.titles);
+    let cacheData = JSON.parse(cacheStr);
+    console.log("Cache Timestamp:", new Date(cacheData.timestamp).toLocaleString());
+    console.log("Total Books:", Object.keys(cacheData.books).length);
+    console.table(cacheData.books);
 } else {
-    console.log("The cache is empty! Refresh the page to load it.");
+    console.log("No cache found! Make sure the extension has run at least once.");
 }
 ```
 

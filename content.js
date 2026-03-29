@@ -5,9 +5,12 @@ const MAX_TEST_PAGES = 999; // Set to 999 to load the whole library
 
 // CSS Selectors
 const SELECTORS = {
+    libraryBookContainer: '.account-list-item',
     libraryBookTitle: '.account-item-info h3',     
+    libraryBookLink: 'a.book', // Contains the ISBN in the href
     alcBookContainer: '.detailed-list-item',       
-    alcBookTitle: 'h2'                             
+    alcBookTitle: 'h2',                             
+    alcBookLink: 'a[href^="/audiobooks/"]' // Links starting with /audiobooks/ contain the ISBN
 };
 // =====================
 
@@ -19,7 +22,6 @@ if (window.location.href.includes(ALC_PAGE_URL_PART)) {
 let overlayEl = null;
 
 function createOverlay() {
-    // If an overlay already exists (like when we hit refresh), remove it first
     if (overlayEl) {
         overlayEl.remove();
     }
@@ -33,19 +35,14 @@ function createOverlay() {
     `;
     document.body.appendChild(overlayEl);
 
-    // Listen for clicks on the new Refresh button
     document.getElementById('alc-reload-btn').addEventListener('click', () => {
         console.log("[ALC Checker] Manual refresh triggered by user.");
-        
-        // 1. Clear the saved cache
         localStorage.removeItem('libro_owned_books_cache');
         
-        // 2. Remove the grey-out effect from all books on the page so we start fresh visually
         document.querySelectorAll('.already-owned-alc').forEach(el => {
             el.classList.remove('already-owned-alc');
         });
         
-        // 3. Restart the entire checking process!
         init();
     });
 }
@@ -57,10 +54,10 @@ function updateOverlay(status, count, isComplete = false) {
     
     if (isComplete) {
         overlayEl.querySelector('.count-text').textContent = `Library: ${count} books`;
-        overlayEl.querySelector('.reload-btn').style.display = 'block'; // Show the button!
+        overlayEl.querySelector('.reload-btn').style.display = 'block'; 
     } else {
         overlayEl.querySelector('.count-text').textContent = `Loaded: ${count} books`;
-        overlayEl.querySelector('.reload-btn').style.display = 'none'; // Hide while loading
+        overlayEl.querySelector('.reload-btn').style.display = 'none'; 
     }
 }
 // ----------------------------
@@ -69,20 +66,21 @@ async function init() {
     console.log("[ALC Checker] Starting up...");
     createOverlay();
     
-    // 1. Get the complete list of books you own
-    const ownedTitles = await fetchAllLibraryBooks();
+    // 1. Get the complete hash map of books you own { "isbn": "title" }
+    const ownedBooksMap = await fetchAllLibraryBooks();
+    const ownedCount = Object.keys(ownedBooksMap).length;
     
-    if (ownedTitles.length === 0) {
+    if (ownedCount === 0) {
         console.log("[ALC Checker] No books found in library or not logged in.");
         updateOverlay("Error: No Books Found", 0, true);
         return; 
     }
 
     // 2. Scan the ALC page and grey out matches
-    greyOutOwnedBooks(ownedTitles);
+    greyOutOwnedBooks(ownedBooksMap);
     
-    // 3. Update overlay to success state and reveal the refresh button
-    updateOverlay("Loading Complete", ownedTitles.length, true);
+    // 3. Update overlay to success state
+    updateOverlay("Loading Complete", ownedCount, true);
 }
 
 async function fetchAllLibraryBooks() {
@@ -91,17 +89,20 @@ async function fetchAllLibraryBooks() {
     if (cacheStr) {
         const cache = JSON.parse(cacheStr);
         const twentyFourHours = 24 * 60 * 60 * 1000;
-        if (Date.now() - cache.timestamp < twentyFourHours) {
-            console.log(`[ALC Checker] Loaded ${cache.titles.length} owned books from fast cache.`);
-            updateOverlay("Loading from Cache...", cache.titles.length);
-            return cache.titles;
+        
+        // Ensure the cache has the new 'books' object structure, not the old 'titles' array
+        if (cache.books && (Date.now() - cache.timestamp < twentyFourHours)) {
+            const cachedCount = Object.keys(cache.books).length;
+            console.log(`[ALC Checker] Loaded ${cachedCount} owned books from fast cache.`);
+            updateOverlay("Loading from Cache...", cachedCount);
+            return cache.books;
         }
     }
 
     console.log("[ALC Checker] Fetching library from Libro.fm...");
     updateOverlay("Loading Library...", 0);
     
-    let allTitles = [];
+    let allBooksMap = {}; // Our Hash Table: { "isbn": "title" }
     let currentPage = 1;
     let hasNextPage = true;
 
@@ -124,17 +125,44 @@ async function fetchAllLibraryBooks() {
             const parser = new DOMParser();
             const doc = parser.parseFromString(html, 'text/html');
             
-            const titleElements = doc.querySelectorAll(SELECTORS.libraryBookTitle);
+            const libraryItems = doc.querySelectorAll(SELECTORS.libraryBookContainer);
             
-            if (titleElements.length === 0) {
+            if (libraryItems.length === 0) {
                 console.log(`[ALC Checker] No more books found. Reached end of library.`);
                 hasNextPage = false;
             } else {
-                const titlesOnPage = Array.from(titleElements).map(el => el.textContent.trim().toLowerCase());
-                allTitles = allTitles.concat(titlesOnPage);
+                let booksFoundOnPage = 0;
+
+                libraryItems.forEach(item => {
+                    const titleEl = item.querySelector(SELECTORS.libraryBookTitle);
+                    const linkEl = item.querySelector(SELECTORS.libraryBookLink);
+                    
+                    let title = titleEl ? titleEl.textContent.trim().toLowerCase() : '';
+                    let isbn = null;
+
+                    // Extract ISBN from URL
+                    if (linkEl) {
+                        const href = linkEl.getAttribute('href');
+                        const match = href.match(/\/audiobooks\/(\d+)/);
+                        if (match) {
+                            isbn = match[1];
+                        }
+                    }
+
+                    // Add to Hash Table
+                    if (isbn) {
+                        allBooksMap[isbn] = title;
+                        booksFoundOnPage++;
+                    } else if (title) {
+                        // Fallback: If no ISBN, store title as key
+                        allBooksMap[`fallback_${title}`] = title;
+                        booksFoundOnPage++;
+                    }
+                });
                 
-                console.log(`[ALC Checker] Found ${titlesOnPage.length} books on page ${currentPage}.`);
-                updateOverlay("Loading Library...", allTitles.length);
+                const totalBooksFoundSoFar = Object.keys(allBooksMap).length;
+                console.log(`[ALC Checker] Extracted ${booksFoundOnPage} books on page ${currentPage}.`);
+                updateOverlay("Loading Library...", totalBooksFoundSoFar);
                 
                 currentPage++;
                 await new Promise(resolve => setTimeout(resolve, 500));
@@ -147,27 +175,54 @@ async function fetchAllLibraryBooks() {
 
     const cacheData = {
         timestamp: Date.now(),
-        titles: allTitles
+        books: allBooksMap
     };
     localStorage.setItem('libro_owned_books_cache', JSON.stringify(cacheData));
     
-    console.log(`[ALC Checker] SUCCESS! Total books found so far: ${allTitles.length}. Saved to cache.`);
-    return allTitles;
+    console.log(`[ALC Checker] SUCCESS! Saved to cache.`);
+    return allBooksMap;
 }
 
-function greyOutOwnedBooks(ownedTitles) {
+function greyOutOwnedBooks(ownedBooksMap) {
     const alcBooks = document.querySelectorAll(SELECTORS.alcBookContainer);
     
     console.log(`[ALC Checker] Found ${alcBooks.length} book containers on the ALC page.`);
 
-    alcBooks.forEach((bookNode, index) => {
+    // Pre-calculate an array of titles for our fallback check
+    // Doing this outside the loop saves processing power!
+    const fallbackTitlesArray = Object.values(ownedBooksMap);
+
+    alcBooks.forEach((bookNode) => {
         const titleNode = bookNode.querySelector(SELECTORS.alcBookTitle);
+        const linkNode = bookNode.querySelector(SELECTORS.alcBookLink);
         
-        if (titleNode) {
-            const title = titleNode.textContent.trim().toLowerCase();
-            if (ownedTitles.includes(title)) {
-                bookNode.classList.add('already-owned-alc');
+        let title = titleNode ? titleNode.textContent.trim().toLowerCase() : '';
+        let isbn = null;
+
+        // Extract ISBN from ALC URL
+        if (linkNode) {
+            const href = linkNode.getAttribute('href');
+            const match = href.match(/\/audiobooks\/(\d+)/);
+            if (match) {
+                isbn = match[1];
             }
+        }
+
+        let isOwned = false;
+
+        // 1. Fast Hash Table Match via exact ISBN
+        if (isbn && ownedBooksMap[isbn]) {
+            isOwned = true;
+            console.log(`[ALC Checker] ISBN Match: ${title} (${isbn})`);
+        } 
+        // 2. Fallback Match via Title (if ISBN is missing/mismatched)
+        else if (title && fallbackTitlesArray.includes(title)) {
+            isOwned = true;
+            console.log(`[ALC Checker] Title Fallback Match: ${title}`);
+        }
+
+        if (isOwned) {
+            bookNode.classList.add('already-owned-alc');
         }
     });
 }
