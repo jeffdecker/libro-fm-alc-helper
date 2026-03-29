@@ -4,6 +4,24 @@
   "version": "1.0",
   "description": "Lets you know if you already own an audiobook on the monthly ALC list, and adds genre information to each book on the ALC list.",
   "permissions": [],
+
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+
+  "action": {
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
+    "default_title": "LibroALCChecker"
+  },
+
   "content_scripts": [
     {
       "matches": ["*://*.libro.fm/playlists/alc*"],
