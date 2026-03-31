@@ -1,0 +1,30 @@
+{
+  "name": "libro-fm-alc-helper",
+  "version": "1.0.0",
+  "description": "A lightweight Google Chrome extension (Manifest V3) that automatically checks the Libro.fm ALC (Advanced Listener Copy) pages for the current month, visually greys out the audiobooks you already own, and injects **color-coded genre tags** directly onto the page.",
+  "main": "background.js",
+  "scripts": {
+    "test": "jest",
+    "build": "bestzip LibroALCHelper-v%npm_package_version%.zip manifest.json content.js background.js options.html options.js options.css styles.css icons images README.md"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jeffdecker/libro-fm-alc-helper.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/jeffdecker/libro-fm-alc-helper/issues"
+  },
+  "homepage": "https://github.com/jeffdecker/libro-fm-alc-helper#readme",
+  "volta": {
+    "node": "24.14.1"
+  },
+  "devDependencies": {
+    "bestzip": "^2.2.3",
+    "jest": "^27.5.1",
+    "jest-chrome": "^0.8.0"
+  }
+}

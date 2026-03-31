@@ -51,7 +51,7 @@ Instead of relying on developer console commands, everything you need to manage 
 ## 🤝 Community & Support
 If you run into any issues, you can easily download your diagnostic data from the Options page and reach out for help:
 * ✉️ **Email Support:** support@celestialwake.com
-* 💬 **Discord:** [Join the Support Discord](YOUR_DISCORD_LINK_HERE)
+* 💬 **Discord:** [Join the Support Discord](https://discord.gg/yn36ZHGY8C)
 * ☕ **Support the Developer:** [Buy Me a Coffee](https://buymeacoffee.com/celestialwake)
 
 Feel free to open an issue or submit a pull request if you have ideas for improvements, better CSS styling, or bug fixes!

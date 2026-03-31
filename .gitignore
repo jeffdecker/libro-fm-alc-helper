@@ -14,3 +14,7 @@ Thumbs.db
 *.ntvs*
 *.njsproj
 *.sln
+
+# Node dependencies
+node_modules/
+npm-debug.log
