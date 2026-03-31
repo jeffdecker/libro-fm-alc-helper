@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Libro.fm ALC Helper Settings</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+
+  <div class="layout-container">
+    
+    <!-- LEFT SIDEBAR & TOC -->
+    <aside class="sidebar">
+        <!-- Moved from header actions to the sidebar -->
+        <a href="https://libro.fm" target="_blank" rel="noopener noreferrer" id="go-to-libro-btn" class="sidebar-btn">
+            <img src="icons/icon48.png" alt="Libro.fm Icon" class="btn-icon">
+            Go to Libro.fm
+        </a>
+
+        <nav class="toc">
+            <h3>Contents</h3>
+            <ul class="toc-list">
+                <li><a href="#how-it-works">How It Works</a></li>
+                <li><a href="#data-management">Data Management</a></li>
+                <li><a href="#support-debugging">Support & Debugging</a></li>
+                <li><a href="#about">About & Contact</a></li>
+            </ul>
+        </nav>
+    </aside>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="main-content">
+      <h1>Libro.fm ALC Helper Settings</h1>
+      
+      <section id="how-it-works">
+          <div class="blurb-container">
+            <h2>What this extension does:</h2>
+            <ul>
+              <li>
+                <strong>Identifies Owned Books:</strong> When you view a monthly ALC list, it loads your library and grays out any books you have already purchased.
+                <span class="note"><strong>Note:</strong> Your library may take some time to load initially, but once complete, it is saved locally for 24 hours and applied instantly to any other ALC pages you visit.</span>
+                <img src="images/already-in-library.png" alt="Example showing a greyed out book already in your library" class="preview-image">
+              </li>
+              <li>
+                <strong>Adds Genre Tags:</strong> It looks at the books on the current ALC page and appends their specific genre tags directly to the listing for easy reference.
+                <img src="images/colorful-genres.png" alt="Example showing colorful genre tags added to an audiobook listing" class="preview-image">
+              </li>
+            </ul>
+          </div>
+
+          <div class="blurb-container">
+            <h2>Loading Status Popup</h2>
+            <p>When you visit an ALC page, a small status box will appear in the top right corner of your screen to keep you updated:</p>
+            <ul>
+              <li>
+                <strong>Library Sync:</strong> Displays whether it is currently loading your library (and how many books it has found so far) or shows the total number of books already loaded. It also includes a "Refresh Library" button so you can manually force an update if you recently acquired a new book.
+              </li>
+              <li>
+                <strong>Genre Tagging:</strong> Indicates whether the extension is actively looking up genre information for the current page, or if it has finished attaching all the genre tags.
+              </li>
+            </ul>
+            <img src="images/library-and-genre-status.png" alt="Example showing the floating status popup with library and genre loading progress" class="preview-image">
+          </div>
+      </section>
+      
+      <section id="data-management" class="setting-group">
+        <h3>Data Management</h3>
+        <p>View or clear the cached data that the extension has saved locally.</p>
+        
+        <!-- Library Data Section -->
+        <div class="data-section">
+          <h4>Library Data</h4>
+          <div class="button-row">
+            <button id="viewLibraryBtn">View Data</button>
+            <button id="clearLibraryBtn" class="clear-btn">Clear Cache</button>
+          </div>
+          <textarea id="libraryDisplay" class="data-display" readonly placeholder="Click 'View Data' to load your cached library..."></textarea>
+        </div>
+
+        <!-- Genre Data Section -->
+        <div class="data-section">
+          <h4>Genre Data</h4>
+          <div class="button-row">
+            <button id="viewGenreBtn">View Data</button>
+            <button id="clearGenreBtn" class="clear-btn">Clear Cache</button>
+          </div>
+          <textarea id="genreDisplay" class="data-display" readonly placeholder="Click 'View Data' to load cached genre tags..."></textarea>
+        </div>
+
+        <!-- Support Section -->
+        <div id="support-debugging" class="data-section support-section">
+            <h2>Support & Debugging</h2>
+            <p>If you are experiencing issues with books not matching or genres not appearing, you can download your local data to send to the developer. This file contains your cached Library ISBNs and Genre tags.</p>
+            <div class="button-group">
+                <button id="download-btn" class="primary-btn">Download Data for Support</button>
+            </div>
+        </div>
+      </section>
+
+      <!-- ABOUT SECTION -->
+      <section id="about" class="section about-section">
+            <h2>About</h2>
+            <p id="extension-version" class="version-text">Libro.fm ALC Helper v...</p>
+            
+            <!-- NEW DISCLAIMER & SUPPORT INSTRUCTIONS -->
+            <p class="about-description">
+                We hope this tool makes navigating the Libro.fm ALC list a breeze! If you find it helpful, please consider joining our Discord community, checking out the GitHub, or buying us a coffee to help keep it free and updated.
+            </p>
+            <p class="about-description">
+                <em>This extension is provided free and as-is.</em> If you experience any issues, please use the <strong>Download Data</strong> button above, then share that file in our Discord server or by email.
+            </p>
+            
+            <div class="about-links">
+                <!-- DISCORD BUTTON -->
+                <a href="YOUR_DISCORD_LINK_HERE" target="_blank" rel="noopener noreferrer" class="about-btn discord-btn">
+                    <svg height="16" width="16" viewBox="0 0 16 16" fill="currentColor" style="margin-right: 5px;">
+                        <path d="M13.545 2.907a13.227 13.227 0 0 0-3.257-1.011.05.05 0 0 0-.052.025c-.141.25-.297.577-.406.833a12.19 12.19 0 0 0-3.658 0 8.258 8.258 0 0 0-.412-.833.051.051 0 0 0-.052-.025c-1.125.194-2.22.534-3.257 1.011a.041.041 0 0 0-.021.018C.356 6.024-.213 9.047.066 12.032c.001.014.01.028.021.037a13.276 13.276 0 0 0 3.995 2.02.05.05 0 0 0 .056-.019c.308-.42.582-.863.818-1.329a.05.05 0 0 0-.01-.059.051.051 0 0 0-.018-.011 8.875 8.875 0 0 1-1.248-.595.05.05 0 0 1-.02-.066.051.051 0 0 1 .015-.019c.084-.063.168-.129.248-.195a.05.05 0 0 1 .051-.007c2.619 1.196 5.454 1.196 8.041 0a.052.052 0 0 1 .053.007c.08.066.164.132.248.195a.051.051 0 0 1-.004.085 8.254 8.254 0 0 1-1.249.594.05.05 0 0 0-.03.07.052.052 0 0 0 .003.005c.24.464.516.905.817 1.329a.05.05 0 0 0 .056.019 13.235 13.235 0 0 0 4.001-2.02.049.049 0 0 0 .021-.037c.334-3.451-.559-6.449-2.366-9.106a.034.034 0 0 0-.02-.019zM5.314 10.13c-1.019 0-1.857-.933-1.857-2.074 0-1.14.821-2.073 1.857-2.073 1.05 0 1.885.945 1.866 2.073 0 1.14-.816 2.074-1.866 2.074zm5.372 0c-1.019 0-1.857-.933-1.857-2.074 0-1.14.821-2.073 1.857-2.073 1.05 0 1.885.945 1.866 2.073 0 1.14-.816 2.074-1.866 2.074z"></path>
+                    </svg>
+                    Discord
+                </a>
+
+                <!-- EMAIL BUTTON -->
+                <a href="mailto:support@celestialwake.com?subject=Libro.fm%20ALC%20Helper%20Feedback" class="about-btn email-btn">
+                    <svg height="16" width="16" viewBox="0 0 16 16" fill="currentColor" style="margin-right: 5px;">
+                        <path d="M.05 3.555A2 2 0 0 1 2 2h12a2 2 0 0 1 1.95 1.555L8 8.414.05 3.555ZM0 4.697v7.104l5.803-3.558L0 4.697ZM6.761 8.83l-6.57 4.027A2 2 0 0 0 2 14h12a2 2 0 0 0 1.808-1.144l-6.57-4.027L8 9.586l-1.239-.757Zm3.436-.586L16 11.801V4.697l-5.803 3.546Z"></path>
+                    </svg>
+                    Email Support
+                </a>
+
+                <!-- BUY ME A COFFEE BUTTON -->
+                <a href="https://buymeacoffee.com/celestialwake" target="_blank" rel="noopener noreferrer" class="about-btn bmac-btn">
+                    <svg height="16" width="16" viewBox="0 0 16 16" fill="currentColor" style="margin-right: 5px;">
+                        <path d="M3.25 10.334c-.878 0-1.587-.698-1.587-1.562V4.545h9.457v4.227c0 .864-.71 1.562-1.587 1.562H3.25z"></path>
+                        <path d="M12.981 4.545v3.125c0 .646-.534 1.171-1.192 1.171h-.669V4.545h1.861zM11.12 11.896H3.25c-1.745 0-3.164-1.398-3.164-3.124V3.764c0-.431.353-.781.789-.781h10.245c.436 0 .789.35.789.781v.781h1.072c1.515 0 2.748 1.215 2.748 2.708v.417c0 1.493-1.233 2.708-2.748 2.708h-1.072v.393c0 1.726-1.419 3.124-3.164 3.124H2.46v-1.563h8.66v1.563zM2.46 14.24v-1.563h8.66v1.563H2.46z"></path>
+                    </svg>
+                    Buy Me a Coffee
+                </a>
+
+                <!-- GITHUB BUTTON -->
+                <a href="YOUR_GITHUB_LINK_HERE" target="_blank" rel="noopener noreferrer" class="about-btn github-btn">
+                    <svg height="16" width="16" viewBox="0 0 16 16" fill="currentColor" style="margin-right: 5px;">
+                        <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+                    </svg>
+                    GitHub
+                </a>
+            </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>

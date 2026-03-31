@@ -1,10 +1,11 @@
 {
   "manifest_version": 3,
-  "name": "Libro.fm ALC Checker",
-  "version": "1.0",
+  "name": "Libro.fm ALC Helper",
+  "version": "1.0.0",
   "description": "Lets you know if you already own an audiobook on the monthly ALC list, and adds genre information to each book on the ALC list.",
   "permissions": [
-    "tabs"
+    "tabs",
+    "storage"
   ],
 
   "icons": {
@@ -25,8 +26,10 @@
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
     },
-    "default_title": "Open Libro.fm"
+    "default_title": "Open Options"
   },
+
+  "options_page": "options.html",
 
   "content_scripts": [
     {
