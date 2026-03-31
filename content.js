@@ -147,19 +147,28 @@ function createOverlay() {
     
     overlayEl = document.createElement('div');
     overlayEl.id = 'alc-checker-overlay';
+    
+    // Updated button text to "Settings"
     overlayEl.innerHTML = `
         <div class="status-text">Initializing...</div>
         <div class="count-text">Loaded: 0 books</div>
         <div class="genre-text"></div>
         <button id="alc-reload-btn" class="reload-btn" title="Force refresh library cache">↻ Refresh Library</button>
+        <button id="alc-settings-btn" class="settings-btn" title="Open Extension Settings">⚙️ Settings</button>
     `;
     document.body.appendChild(overlayEl);
 
+    // Existing Reload Button Listener
     document.getElementById('alc-reload-btn').addEventListener('click', async () => {
         DebugLogger.log("[ALC Helper] Manual refresh triggered by user.");
-        // Because of our smart listener above, we ONLY need to delete the storage!
-        // The listener will see it delete, see the tab is visible, and trigger resetAndReload() automatically.
         await removeStorage(['libro_owned_books_cache', 'libro_genres_cache']); 
+    });
+
+    // NEW: Settings Button Listener
+    document.getElementById('alc-settings-btn').addEventListener('click', () => {
+        DebugLogger.log("[ALC Helper] User opened settings page from overlay.");
+        chrome.runtime.sendMessage({ action: "openOptionsPage" }); 
+        // Note: We still send "openOptionsPage" because that's what Chrome calls the API!
     });
 }
 

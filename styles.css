@@ -30,6 +30,26 @@
     margin-top: 4px;
 }
 
+/* === Settings Button === */
+.settings-btn {
+    margin-top: 5px;
+    background-color: #3498db; 
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 10px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 12px;
+    pointer-events: auto; /* Required: Lets us click the button through the overlay */
+    transition: background-color 0.2s;
+    width: 100%;
+}
+
+.settings-btn:hover {
+    background-color: #2980b9;
+}
+
 /* === Grey out owned books === */
 .already-owned-alc {
     position: relative;
