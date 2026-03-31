@@ -1,7 +1,7 @@
 /* === UI Overlay Box === */
 #alc-checker-overlay {
     position: fixed;
-    top: 120px; /* <-- CHANGED: Pushed down ~100 pixels */
+    top: 120px; /* <-- Pushed down ~100 pixels */
     right: 20px;
     background-color: rgba(0, 0, 0, 0.8);
     color: white;
@@ -33,13 +33,20 @@
 /* === Grey out owned books === */
 .already-owned-alc {
     position: relative;
-    pointer-events: none; /* Prevents clicking on the owned book */
+    /* REMOVED: pointer-events: none; so the user can still click the link */
 }
 
 /* Dim the book contents, but NOT the badge */
 .already-owned-alc > * {
     filter: grayscale(100%);
     opacity: 0.4;
+    transition: all 0.2s ease; /* Added smooth transition for hover */
+}
+
+/* Added: Hover effect so users know they can still click the book */
+.already-owned-alc:hover > * {
+    filter: grayscale(50%);
+    opacity: 0.8;
 }
 
 /* Badge overlay for owned books */
@@ -58,6 +65,9 @@
     text-align: center;
     z-index: 10;
     box-shadow: 0 4px 15px rgba(0,0,0,0.6); /* Adds a nice shadow to make it pop */
+    
+    /* ADDED: This makes mouse clicks pass right through the badge text to the book link */
+    pointer-events: none; 
 }
 
 /* === Reload Button === */

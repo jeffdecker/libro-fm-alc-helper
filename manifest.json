@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Libro.fm ALC Helper",
   "version": "1.0.0",
-  "description": "Lets you know if you already own an audiobook on the monthly ALC list, and adds genre information to each book on the ALC list.",
+  "description": "See which ALC audiobooks you already own, complete with color-coded genre tags.",
   "permissions": [
     "tabs",
     "storage"
