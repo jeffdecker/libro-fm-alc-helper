@@ -240,6 +240,9 @@ async function fetchAllLibraryBooks() {
     let allBooksMap = {}; 
     let currentPage = 1;
     let hasNextPage = true;
+    
+    // 1. ADD THE FLAG HERE
+    let fetchSuccessful = true;
 
     while (hasNextPage) {
         if (currentPage > MAX_TEST_PAGES) {
@@ -253,6 +256,7 @@ async function fetchAllLibraryBooks() {
             
             if (!response.ok) {
                 DebugLogger.error(`[ALC Helper] Failed to fetch page ${currentPage}.`);
+                fetchSuccessful = false; // 2. MARK AS FAILED BEFORE BREAKING
                 break; 
             }
 
@@ -299,18 +303,35 @@ async function fetchAllLibraryBooks() {
                 await new Promise(resolve => setTimeout(resolve, 500));
             }
         } catch (error) {
-            DebugLogger.error(`[ALC Helper] Error fetching library page ${currentPage}:`, error);
-            hasNextPage = false; 
+            // Check if the error is due to the browser cutting off the fetch (navigation)
+            // Note: Fixed 'pageNum' to 'currentPage' here!
+            if (error.message === 'Failed to fetch' || error.name === 'TypeError') {
+                DebugLogger.warn(`Fetch interrupted on library page ${currentPage}. User likely navigated away.`);
+            } else {
+                // It's a real error, log it as usual
+                DebugLogger.error(`Error fetching library page ${currentPage}: ${error.toString()}`);
+            }
+            
+            fetchSuccessful = false; // 3. MARK AS FAILED BEFORE BREAKING
+            break; 
         }
     }
 
-    const cacheData = {
-        timestamp: Date.now(),
-        books: allBooksMap
-    };
-    
-    await setStorage('libro_owned_books_cache', cacheData);
-    DebugLogger.log(`[ALC Helper] SUCCESS! Saved to cache.`);
+    // 4. ONLY SAVE TO CACHE IF IT WAS 100% SUCCESSFUL
+    if (fetchSuccessful) {
+        const cacheData = {
+            timestamp: Date.now(),
+            books: allBooksMap
+        };
+        
+        await setStorage('libro_owned_books_cache', cacheData);
+        DebugLogger.log(`[ALC Helper] SUCCESS! Saved ${Object.keys(allBooksMap).length} books to cache.`);
+    } else {
+        DebugLogger.warn(`[ALC Helper] Fetch aborted. Cache was NOT updated to prevent saving incomplete data.`);
+    }
+
+    // We still return whatever books we managed to find before the interruption.
+    // They won't be cached, but the script can use them for the current split-second before the new page loads.
     return allBooksMap;
 }
 

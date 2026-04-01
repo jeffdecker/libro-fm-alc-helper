@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Libro.fm ALC Helper",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "See which ALC audiobooks you already own, complete with color-coded genre tags.",
   "permissions": [
     "tabs",
