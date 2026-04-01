@@ -234,14 +234,16 @@ async function fetchAllLibraryBooks() {
         }
     }
 
-    DebugLogger.log("[ALC Helper] Fetching library from Libro.fm...");
-    updateOverlay("Loading Library...", 0);
+    // --- Pre-calculate total pages ---
+    let totalPages = await getTotalLibraryPages();
+    let totalPagesText = totalPages ? totalPages : "?";
+
+    DebugLogger.log(`[ALC Helper] Fetching library from Libro.fm... Expected pages: ${totalPagesText}`);
+    updateOverlay(`Loading Page 1 of ${totalPagesText}...`, 0);
     
     let allBooksMap = {}; 
     let currentPage = 1;
     let hasNextPage = true;
-    
-    // 1. ADD THE FLAG HERE
     let fetchSuccessful = true;
 
     while (hasNextPage) {
@@ -251,19 +253,21 @@ async function fetchAllLibraryBooks() {
         }
 
         try {
+            // Update overlay with current progress
+            const currentTotal = Object.keys(allBooksMap).length;
+            updateOverlay(`Loading Page ${currentPage} of ${totalPagesText}...`, currentTotal);
+
             DebugLogger.log(`[ALC Helper] Fetching library page ${currentPage}...`);
             const response = await fetch(`${LIBRARY_URL}?page=${currentPage}`);
             
             if (!response.ok) {
                 DebugLogger.error(`[ALC Helper] Failed to fetch page ${currentPage}.`);
-                fetchSuccessful = false; // 2. MARK AS FAILED BEFORE BREAKING
+                fetchSuccessful = false; 
                 break; 
             }
 
             const html = await response.text();
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
-            
+            const doc = new DOMParser().parseFromString(html, 'text/html');
             const libraryItems = doc.querySelectorAll(SELECTORS.libraryBookContainer);
             
             if (libraryItems.length === 0) {
@@ -282,42 +286,51 @@ async function fetchAllLibraryBooks() {
                     if (linkEl) {
                         const href = linkEl.getAttribute('href');
                         const match = href.match(/\/audiobooks\/(\d+)/);
-                        if (match) {
-                            isbn = match[1];
-                        }
+                        if (match) isbn = match[1];
                     }
 
                     if (isbn) {
-                        allBooksMap[isbn] = title;
+                        // --- NEW: Store as an object with title and source ---
+                        allBooksMap[isbn] = {
+                            title: title,
+                            source: `Library Page ${currentPage}`
+                        };
                         booksFoundOnPage++;
                     } else {
                         DebugLogger.warn(`[ALC Helper] Skipping book (No ISBN found): ${title}`);
                     }
                 });
                 
-                const totalBooksFoundSoFar = Object.keys(allBooksMap).length;
                 DebugLogger.log(`[ALC Helper] Extracted ${booksFoundOnPage} books on page ${currentPage}.`);
-                updateOverlay("Loading Library...", totalBooksFoundSoFar);
                 
                 currentPage++;
                 await new Promise(resolve => setTimeout(resolve, 500));
             }
         } catch (error) {
-            // Check if the error is due to the browser cutting off the fetch (navigation)
-            // Note: Fixed 'pageNum' to 'currentPage' here!
             if (error.message === 'Failed to fetch' || error.name === 'TypeError') {
-                DebugLogger.warn(`Fetch interrupted on library page ${currentPage}. User likely navigated away.`);
+                DebugLogger.warn(`Fetch interrupted on library page ${currentPage}. User navigated away.`);
             } else {
-                // It's a real error, log it as usual
                 DebugLogger.error(`Error fetching library page ${currentPage}: ${error.toString()}`);
             }
-            
-            fetchSuccessful = false; // 3. MARK AS FAILED BEFORE BREAKING
+            fetchSuccessful = false; 
             break; 
         }
     }
 
-    // 4. ONLY SAVE TO CACHE IF IT WAS 100% SUCCESSFUL
+    // --- Fetch Pre-orders if main library fetched successfully ---
+    if (fetchSuccessful) {
+        try {
+            updateOverlay(`Checking Pre-orders...`, Object.keys(allBooksMap).length);
+            const preordersMap = await fetchPreorderBooks();
+            
+            // Merge pre-orders into the main library map
+            Object.assign(allBooksMap, preordersMap);
+        } catch (error) {
+            // If the user navigates away DURING the pre-order check, we abort the save.
+            fetchSuccessful = false; 
+        }
+    }
+
     if (fetchSuccessful) {
         const cacheData = {
             timestamp: Date.now(),
@@ -325,14 +338,94 @@ async function fetchAllLibraryBooks() {
         };
         
         await setStorage('libro_owned_books_cache', cacheData);
-        DebugLogger.log(`[ALC Helper] SUCCESS! Saved ${Object.keys(allBooksMap).length} books to cache.`);
+        DebugLogger.log(`[ALC Helper] SUCCESS! Saved ${Object.keys(allBooksMap).length} total books (Library + Pre-orders) to cache.`);
     } else {
         DebugLogger.warn(`[ALC Helper] Fetch aborted. Cache was NOT updated to prevent saving incomplete data.`);
     }
 
-    // We still return whatever books we managed to find before the interruption.
-    // They won't be cached, but the script can use them for the current split-second before the new page loads.
     return allBooksMap;
+}
+
+async function fetchPreorderBooks() {
+    let preordersMap = {};
+    try {
+        const response = await fetch('https://libro.fm/user/preorders');
+        
+        if (!response.ok) {
+            DebugLogger.warn(`[ALC Helper] No preorders found or failed to load preorders page.`);
+            return preordersMap;
+        }
+
+        const html = await response.text();
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        const preorderItems = doc.querySelectorAll(SELECTORS.libraryBookContainer);
+
+        preorderItems.forEach(item => {
+            const titleEl = item.querySelector(SELECTORS.libraryBookTitle);
+            const linkEl = item.querySelector(SELECTORS.libraryBookLink);
+            
+            let title = titleEl ? titleEl.textContent.trim().toLowerCase() : 'Unknown Title';
+            let isbn = null;
+
+            if (linkEl) {
+                const href = linkEl.getAttribute('href');
+                const match = href.match(/\/audiobooks\/(\d+)/);
+                if (match) isbn = match[1];
+            }
+
+            if (isbn) {
+                // --- NEW: Store preorders with the "Preorder" source ---
+                preordersMap[isbn] = {
+                    title: title,
+                    source: "Preorder"
+                };
+            }
+        });
+
+        DebugLogger.log(`[ALC Helper] Extracted ${Object.keys(preordersMap).length} preorders.`);
+    } catch (error) {
+        if (error.message === 'Failed to fetch' || error.name === 'TypeError') {
+            DebugLogger.warn(`Fetch interrupted on preorders. User navigated away.`);
+            throw error; // Throw so fetchAllLibraryBooks knows the fetch wasn't successful
+        } else {
+            DebugLogger.error(`Error fetching preorders: ${error.toString()}`);
+        }
+    }
+
+    return preordersMap;
+}
+
+
+/**
+ * Fetches the /user page, finds the "See entire library (XXX)" button, 
+ * and calculates how many pages we need to fetch (20 books per page).
+ */
+async function getTotalLibraryPages() {
+    try {
+        const response = await fetch('https://libro.fm/user');
+        if (!response.ok) return null;
+        
+        const html = await response.text();
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        
+        // Find the specific link to the library
+        const libraryLinks = Array.from(doc.querySelectorAll('a[href="/user/library"]'));
+        const entireLibraryLink = libraryLinks.find(a => a.textContent.includes('See entire library'));
+        
+        if (entireLibraryLink) {
+            // Extract the number from "See entire library (152)"
+            const match = entireLibraryLink.textContent.match(/\((\d+)\)/);
+            if (match) {
+                const totalBooks = parseInt(match[1], 10);
+                const totalPages = Math.ceil(totalBooks / 20);
+                DebugLogger.log(`[ALC Helper] Found total books: ${totalBooks}. Calculated pages: ${totalPages}`);
+                return totalPages;
+            }
+        }
+    } catch (error) {
+        DebugLogger.warn(`[ALC Helper] Could not pre-calculate total pages: ${error.toString()}`);
+    }
+    return null; // Return null if it fails, so we can fallback to "?"
 }
 
 function processALCBooks(ownedBooksMap) {
@@ -340,6 +433,11 @@ function processALCBooks(ownedBooksMap) {
     const booksToProcess = []; 
 
     alcBooks.forEach((bookNode) => {
+        // 1. Idempotency: Skip if we've already processed this exact book
+        if (bookNode.dataset.alcProcessed === 'true') {
+            return; 
+        }
+
         const linkNode = bookNode.querySelector(SELECTORS.alcBookLink);
         
         let isbn = null;
@@ -347,22 +445,36 @@ function processALCBooks(ownedBooksMap) {
 
         if (linkNode) {
             bookUrl = linkNode.href; 
-            const match = linkNode.getAttribute('href').match(/\/audiobooks\/(\d+)/);
+            // 2. Safety check: Ensure getAttribute doesn't return null before matching
+            const hrefAttr = linkNode.getAttribute('href') || '';
+            const match = hrefAttr.match(/\/audiobooks\/(\d+)/);
             if (match) isbn = match[1];
         }
 
-        let isOwned = false;
-        if (isbn && ownedBooksMap[isbn]) {
-            isOwned = true;
-            DebugLogger.log(`[ALC Helper] 📚 ALC Match! Greyed out ISBN: ${isbn} (Library Title: "${ownedBooksMap[isbn]}")`);
-        }
-
-        if (isOwned) {
-            bookNode.classList.add('already-owned-alc');
-        }
-
+        // Only process if we successfully parsed an ISBN
         if (isbn && bookUrl) {
-            booksToProcess.push({ isbn: isbn, bookUrl: bookUrl, element: bookNode, bookNode: bookNode });
+            let isOwned = !!ownedBooksMap[isbn];
+
+            if (isOwned) {
+                DebugLogger.log(`[ALC Helper] 📚 ALC Match! Greyed out ISBN: ${isbn} (Library Title: "${ownedBooksMap[isbn]}")`);
+                bookNode.classList.add('already-owned-alc');
+                
+                // 3. Inject the UI Badge (if it isn't handled purely via CSS ::after)
+                if (!bookNode.querySelector('.alc-owned-badge')) {
+                    const badge = document.createElement('div');
+                    badge.className = 'alc-owned-badge';
+                    badge.textContent = 'Already in Library';
+                    // Optional: You can also add styles directly here if they aren't fully in styles.css
+                    // badge.style.pointerEvents = 'none'; 
+                    bookNode.appendChild(badge);
+                }
+            }
+
+            // 4. Cleaned up return object (removed redundant properties)
+            booksToProcess.push({ isbn, bookUrl, bookNode });
+
+            // Mark this node as processed so we don't fetch its genre twice
+            bookNode.dataset.alcProcessed = 'true';
         }
     });
 
