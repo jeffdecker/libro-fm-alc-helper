@@ -18,3 +18,14 @@ Thumbs.db
 # Node dependencies
 node_modules/
 npm-debug.log
+
+# Build/release artifacts
+/dist/
+/build/
+/out/
+*.zip
+*.tar.gz
+*.exe
+*.dll
+*.so
+*.jar
