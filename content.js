@@ -1,5 +1,5 @@
 // === CONFIGURATION ===
-const ALC_PAGE_URL_PART = "/playlists/alc"; 
+const ALC_PAGE_URL_PART = "/pub-list/bookseller-alcs"; 
 const LIBRARY_URL = "https://libro.fm/user/library"; 
 const MAX_TEST_PAGES = 999; 
 
@@ -8,9 +8,9 @@ const SELECTORS = {
     libraryBookContainer: '.account-list-item',
     libraryBookTitle: '.account-item-info h3',     
     libraryBookLink: 'a.book', 
-    alcBookContainer: '.detailed-list-item',       
+    alcBookContainer: '.book-grid-item',       
     alcBookTitle: 'h2',                             
-    alcBookLink: 'a[href^="/audiobooks/"]',
+    alcBookLink: 'a.book',
     alcPillTarget: 'p.margin-top', 
     detailPageGenreLinks: '.audiobook-genres a' 
 };
@@ -438,17 +438,30 @@ function processALCBooks(ownedBooksMap) {
             return; 
         }
 
-        const linkNode = bookNode.querySelector(SELECTORS.alcBookLink);
+        // 2. Smart Link Selection: 
+        // Handles both cases: if bookNode is the <a>, OR if it contains the <a>
+        const linkNode = bookNode.matches('a') ? bookNode : bookNode.querySelector(SELECTORS.alcBookLink);
         
         let isbn = null;
         let bookUrl = null;
 
         if (linkNode) {
-            bookUrl = linkNode.href; 
-            // 2. Safety check: Ensure getAttribute doesn't return null before matching
+            bookUrl = linkNode.href; // Absolute URL for genre fetching
+            
+            // Primary ISBN extraction (Regex from href)
             const hrefAttr = linkNode.getAttribute('href') || '';
             const match = hrefAttr.match(/\/audiobooks\/(\d+)/);
-            if (match) isbn = match[1];
+            
+            if (match && match[1]) {
+                isbn = match[1];
+            } else {
+                // BACKUP: If URL structure changes, try grabbing it from the Quick Look button!
+                const quickLookBtn = bookNode.querySelector('button[data-open^="book-"]');
+                if (quickLookBtn) {
+                    const btnMatch = quickLookBtn.getAttribute('data-open').match(/book-(\d+)/);
+                    if (btnMatch) isbn = btnMatch[1];
+                }
+            }
         }
 
         // Only process if we successfully parsed an ISBN
@@ -456,24 +469,26 @@ function processALCBooks(ownedBooksMap) {
             let isOwned = !!ownedBooksMap[isbn];
 
             if (isOwned) {
-                DebugLogger.log(`[ALC Helper] 📚 ALC Match! Greyed out ISBN: ${isbn} (Library Title: "${ownedBooksMap[isbn]}")`);
+                DebugLogger.log(`[ALC Helper] 📚 ALC Match! Greyed out ISBN: ${isbn} (Library Title: "${ownedBooksMap[isbn].title}")`);
+                
+                // Add dimming class to the outermost wrapper (.book-grid-item)
                 bookNode.classList.add('already-owned-alc');
                 
-                // 3. Inject the UI Badge (if it isn't handled purely via CSS ::after)
+                // 3. Inject the UI Badge safely
                 if (!bookNode.querySelector('.alc-owned-badge')) {
                     const badge = document.createElement('div');
                     badge.className = 'alc-owned-badge';
                     badge.textContent = 'Already in Library';
-                    // Optional: You can also add styles directly here if they aren't fully in styles.css
-                    // badge.style.pointerEvents = 'none'; 
+                    
+                    // Since bookNode is a <div> (.book-grid-item), this is DOM-safe!
                     bookNode.appendChild(badge);
                 }
             }
 
-            // 4. Cleaned up return object (removed redundant properties)
+            // 4. Queue up for Genre Fetching
             booksToProcess.push({ isbn, bookUrl, bookNode });
 
-            // Mark this node as processed so we don't fetch its genre twice
+            // Mark this node as processed so we don't process it again on scroll/DOM mutation
             bookNode.dataset.alcProcessed = 'true';
         }
     });
@@ -558,7 +573,7 @@ async function loadAndInjectGenres(booksData) {
         updateOverlay("Loading Complete", libraryCount, true, `Genres loaded: ${fetchedCount}/${booksData.length}`);
 
         if (genres && genres.length > 0) {
-            let currentBookElement = book.element;
+            let currentBookElement = book.bookNode;
             if (!currentBookElement) {
                 const bookLink = document.querySelector(`a[href*="${book.isbn}"]`);
                 if (bookLink) {
@@ -567,9 +582,8 @@ async function loadAndInjectGenres(booksData) {
             }
 
             if (!currentBookElement) continue; 
-            const target = currentBookElement.querySelector(SELECTORS.alcPillTarget);
-            if (!target) continue;
 
+            // Safely inject if the container doesn't already have genres
             if (!currentBookElement.querySelector('.alc-genre-container')) {
                 const pillContainer = document.createElement('div');
                 pillContainer.className = 'alc-genre-container';
@@ -582,7 +596,22 @@ async function loadAndInjectGenres(booksData) {
                     pillContainer.appendChild(pill);
                 });
 
-                target.after(pillContainer); 
+                // --- NEW INJECTION LOGIC ---
+                // Try to find the book-info div to place genres right underneath it
+                const bookInfo = currentBookElement.querySelector('.book-info');
+                
+                if (bookInfo) {
+                    // Puts the container right below the title/author block
+                    bookInfo.after(pillContainer); 
+                } else {
+                    // Fallback: Put it at the bottom of the link tag
+                    const bookLink = currentBookElement.querySelector('a.book, a[href*="/audiobooks/"]');
+                    if (bookLink) {
+                        bookLink.appendChild(pillContainer);
+                    } else {
+                        currentBookElement.appendChild(pillContainer);
+                    }
+                }
             }
         }
     }

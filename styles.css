@@ -56,38 +56,43 @@
     /* REMOVED: pointer-events: none; so the user can still click the link */
 }
 
-/* Dim the book contents, but NOT the badge */
-.already-owned-alc > * {
+/* Dim the book contents, but NOT the new DOM-injected badge */
+.already-owned-alc > *:not(.alc-owned-badge) {
     filter: grayscale(100%);
     opacity: 0.4;
     transition: all 0.2s ease; /* Added smooth transition for hover */
 }
 
 /* Added: Hover effect so users know they can still click the book */
-.already-owned-alc:hover > * {
+.already-owned-alc:hover > *:not(.alc-owned-badge) {
     filter: grayscale(50%);
     opacity: 0.8;
 }
 
-/* Badge overlay for owned books */
-.already-owned-alc::after {
-    content: "Already in Library";
+/* Badge overlay for owned books (Centered on the square cover) */
+.alc-owned-badge {
     position: absolute;
-    top: 50%;
+    top: 0;              /* Start at the absolute top of the book card */
+    margin-top: 50%;     /* Push down exactly 50% of the card's WIDTH (the center of the square cover) */
     left: 50%;
     transform: translate(-50%, -50%);
-    background-color: #000000; /* Solid Black */
-    color: #ffffff;            /* Solid White */
-    padding: 20px 30px;        /* Increased padding */
+    
+    background-color: #000000; 
+    color: #ffffff;            
+    padding: 10px 20px;        
     border-radius: 8px;
     font-weight: bold;
-    font-size: 24px;           /* Increased font size */
+    font-size: 12px;           
     text-align: center;
     z-index: 10;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.6); /* Adds a nice shadow to make it pop */
-    
-    /* ADDED: This makes mouse clicks pass right through the badge text to the book link */
+    box-shadow: 0 4px 15px rgba(0,0,0,0.6); 
     pointer-events: none; 
+    transition: opacity 0.3s ease-in-out 0.15s;
+}
+
+/* Fade out the "Already in Library" badge when hovering over the book */
+.already-owned-alc:hover .alc-owned-badge {
+    opacity: 0;
 }
 
 /* === Reload Button === */
@@ -115,18 +120,19 @@
 .alc-genre-container {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 10px; /* Space between the "Length" text and the pills */
-    margin-bottom: 10px;
+    gap: 4px;
+    margin-bottom: 8px; /* A little space before the next element/bottom */
+    padding: 0; 
+    justify-content: flex-start; /* Aligns them to the left with the text */
+    width: 100%;
+    z-index: 5;
 }
 
 .alc-genre-pill {
-    padding: 4px 10px;
-    border-radius: 12px;
     font-size: 11px;
-    font-weight: bold;
-    color: #fff;
-    background-color: #555; /* Default color if no dynamic color exists */
+    padding: 2px 6px;
+    border-radius: 12px;
+    color: white;
+    text-shadow: 0px 1px 2px rgba(0,0,0,0.4);
     white-space: nowrap;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
 }

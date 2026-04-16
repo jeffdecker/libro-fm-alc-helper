@@ -1,10 +1,9 @@
 {
   "manifest_version": 3,
   "name": "Libro.fm ALC Helper",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "See which ALC audiobooks you already own, complete with color-coded genre tags.",
   "permissions": [
-    "tabs",
     "storage"
   ],
 
@@ -33,7 +32,7 @@
 
   "content_scripts": [
     {
-      "matches": ["*://*.libro.fm/playlists/alc*"],
+      "matches": ["*://*.libro.fm/pub-list/bookseller-alcs*"],
       "js": ["content.js"],
       "css": ["styles.css"]
     }
