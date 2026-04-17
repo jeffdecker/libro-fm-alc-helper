@@ -87,7 +87,7 @@
     z-index: 10;
     box-shadow: 0 4px 15px rgba(0,0,0,0.6); 
     pointer-events: none; 
-    transition: opacity 0.3s ease-in-out 0.15s;
+    transition: opacity 0.3s ease-in-out;
 }
 
 /* Fade out the "Already in Library" badge when hovering over the book */

@@ -5,7 +5,7 @@
   "main": "background.js",
   "scripts": {
     "test": "jest",
-    "build": "bestzip LibroALCHelper-v%npm_package_version%.zip manifest.json content.js background.js options.html options.js options.css styles.css icons images README.md"
+    "build": "cross-var bestzip LibroALCHelper-v$npm_package_version.zip manifest.json content.js background.js options.html options.js options.css styles.css icons images README.md"
   },
   "repository": {
     "type": "git",
@@ -24,7 +24,8 @@
   },
   "devDependencies": {
     "bestzip": "^2.2.3",
-    "jest": "^27.5.1",
+    "cross-var": "^1.1.0",
+    "jest": "^30.3.0",
     "jest-chrome": "^0.8.0"
   }
 }
