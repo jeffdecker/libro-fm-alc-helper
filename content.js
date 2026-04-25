@@ -556,7 +556,6 @@ async function loadAndInjectGenres(booksData) {
                         .filter(text => text.length > 0);
                     
                     genreCache[book.isbn] = genres;
-                    await saveGenreCache(genreCache);
                 }
                 
                 await new Promise(r => setTimeout(r, 400));
@@ -615,4 +614,9 @@ async function loadAndInjectGenres(booksData) {
             }
         }
     }
+
+    // Save the updated cache at the end, merging with any concurrent updates
+    const latestCache = await getGenreCache();
+    Object.assign(latestCache, genreCache);
+    await setStorage('libro_genres_cache', latestCache);
 }
