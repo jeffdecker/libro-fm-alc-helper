@@ -76,5 +76,8 @@ If you run into any issues, you can easily download your diagnostic data from th
 
 Feel free to open an issue or submit a pull request if you have ideas for improvements, better CSS styling, or bug fixes!
 
+## Disclaimer
+This is an unofficial, community-driven tool. It is not affiliated with Libro.fm. All product names, trademarks, and registered trademarks are property of their respective owners.
+
 ## 🤖 Acknowledgments
 * This extension was developed with the coding assistance of Google's **Gemini Pro** AI, which assisted with the Manifest V3 Service Worker setup, ISBN Hash Table implementation, DOM traversal logic, asynchronous polite fetching, custom data export systems, and automated build pipelines.

@@ -1,23 +1,20 @@
 {
   "manifest_version": 3,
-  "name": "Libro.fm ALC Helper",
-  "version": "1.0.2",
+  "name": "ALC Helper for Libro.fm",
+  "version": "1.0.3",
   "description": "See which ALC audiobooks you already own, complete with color-coded genre tags.",
   "permissions": [
     "storage"
   ],
-
   "icons": {
     "16": "icons/icon16.png",
     "32": "icons/icon32.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-
   "background": {
     "service_worker": "background.js"
   },
-
   "action": {
     "default_icon": {
       "16": "icons/icon16.png",
@@ -27,14 +24,18 @@
     },
     "default_title": "Open Options"
   },
-
   "options_page": "options.html",
-
   "content_scripts": [
     {
-      "matches": ["*://*.libro.fm/pub-list/bookseller-alcs*"],
-      "js": ["content.js"],
-      "css": ["styles.css"]
+      "matches": [
+        "*://*.libro.fm/pub-list/bookseller-alcs*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "styles.css"
+      ]
     }
   ]
 }
