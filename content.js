@@ -121,10 +121,9 @@ document.addEventListener('visibilitychange', () => {
 // Helper function to clean the UI and restart
 function resetAndReload() {
     if (isProcessing) return; // Prevent double-triggers
-    
-    document.querySelectorAll('.already-owned-alc').forEach(el => el.classList.remove('already-owned-alc'));
-    document.querySelectorAll('.alc-genre-container').forEach(el => el.remove());
-    
+
+    document.querySelectorAll('[data-alc-processed]').forEach(el => el.removeAttribute('data-alc-processed'));
+
     if (overlayEl) {
         updateOverlay("Resetting...", 0);
     }
@@ -161,7 +160,8 @@ function createOverlay() {
     // Existing Reload Button Listener
     document.getElementById('alc-reload-btn').addEventListener('click', async () => {
         DebugLogger.log("[ALC Helper] Manual refresh triggered by user.");
-        await removeStorage(['libro_owned_books_cache', 'libro_genres_cache']); 
+        // Keep genre cache so previously fetched genres remain available on reload.
+        await removeStorage(['libro_owned_books_cache']);
     });
 
     // NEW: Settings Button Listener
@@ -206,6 +206,11 @@ async function init() {
             updateOverlay("Error: No Books Found", 0, true);
             return; 
         }
+
+        // Clear previous UI elements before processing new data
+        document.querySelectorAll('.already-owned-alc').forEach(el => el.classList.remove('already-owned-alc'));
+        document.querySelectorAll('.alc-owned-badge').forEach(el => el.remove());
+        document.querySelectorAll('.alc-genre-container').forEach(el => el.remove());
 
         // 2. Scan ALC page, grey out owned books, and gather URLs for genre fetching
         const alcBooksData = processALCBooks(ownedBooksMap);
