@@ -15,8 +15,8 @@
 
 #alc-checker-overlay .status-text {
     font-weight: bold;
-    margin-bottom: 5px;
     font-size: 14px;
+    text-align: center;
 }
 
 #alc-checker-overlay .count-text {
@@ -27,7 +27,7 @@
 #alc-checker-overlay .genre-text {
     font-size: 11px;
     color: #cccccc;
-    margin-top: 4px;
+    text-align: center;
 }
 
 /* === Settings Button === */
@@ -95,26 +95,7 @@
     opacity: 0;
 }
 
-/* === Reload Button === */
-.reload-btn {
-    display: none; /* Hidden while the library is loading */
-    margin-top: 10px;
-    background-color: #ffffff;
-    color: #000000;
-    border: none;
-    border-radius: 4px;
-    padding: 6px 10px;
-    font-weight: bold;
-    cursor: pointer;
-    font-size: 12px;
-    pointer-events: auto; /* Lets us click the button even though the parent box is click-through! */
-    transition: background-color 0.2s;
-    width: 100%;
-}
 
-.reload-btn:hover {
-    background-color: #dddddd;
-}
 
 /* Genre Pills Container */
 .alc-genre-container {
@@ -136,3 +117,46 @@
     text-shadow: 0px 1px 2px rgba(0,0,0,0.4);
     white-space: nowrap;
 }
+
+/* === Alignment & Visual Clean Up === */
+/* Force the parent container to be a Flexbox container so equal-height rows are enforced, even if floated columns were used originally */
+.book-grid {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: stretch !important; /* Forces all book items in a row to stretch to identical heights */
+}
+
+/* Ensure all book grid items stretch to the same height and align action buttons at the bottom */
+.book-grid-item {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important; /* Forces a.book to top and action buttons to the absolute bottom */
+    align-self: stretch !important; /* Overrides any parent align-items and forces the card to stretch to match the row's tallest card */
+    height: auto !important; /* Let Flexbox stretching handle the height dynamically */
+}
+
+/* Allow the book link container to grow and fill the vertical space */
+.book-grid-item a.book {
+    flex-grow: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    height: auto !important;
+    /*border: 2px solid #cccccc !important;
+    border-radius: 10px !important;
+    transition: border-color 0.2s ease; 
+    border-spacing: 10px 5px !important;
+    */ 
+}
+
+/* Genre pills sit directly below the title/author block */
+.book-grid-item .alc-genre-container {
+    margin-top: 0 !important;
+    margin-bottom: 8px !important;
+}
+
+/* Ensure the action row/buttons stay firmly at the bottom of the card */
+.book-grid-item .alc-action-row {
+    margin-top: auto !important;
+}
+

@@ -1,43 +1,28 @@
 document.addEventListener('DOMContentLoaded', () => {
     
     // --- Elements ---
-    const viewLibraryBtn = document.getElementById('viewLibraryBtn');
-    const clearLibraryBtn = document.getElementById('clearLibraryBtn');
-    const libraryDisplay = document.getElementById('libraryDisplay');
-  
+    const toggleCustomStyling = document.getElementById('toggle-custom-styling');
     const viewGenreBtn = document.getElementById('viewGenreBtn');
     const clearGenreBtn = document.getElementById('clearGenreBtn');
     const genreDisplay = document.getElementById('genreDisplay');
   
     // --- Constants ---
-    const LIBRARY_CACHE_KEY = 'libro_owned_books_cache';
     const GENRE_CACHE_KEY = 'libro_genres_cache';
+    const CUSTOM_STYLING_KEY = 'libro_custom_owned_style';
   
     // ==========================================
-    // LIBRARY DATA LOGIC
+    // PREFERENCES LOGIC
     // ==========================================
     
-    viewLibraryBtn.addEventListener('click', () => {
-      chrome.storage.local.get([LIBRARY_CACHE_KEY], (result) => {
-        const data = result[LIBRARY_CACHE_KEY];
-        
-        if (data) {
-          // Data from chrome.storage might be an object already, or a JSON string
-          let parsedData = data;
-          if (typeof data === 'string') {
-            try { parsedData = JSON.parse(data); } catch(e) {}
-          }
-          libraryDisplay.value = JSON.stringify(parsedData, null, 2); 
-        } else {
-          libraryDisplay.value = "No library data found in cache. Visit Libro.fm to generate it.";
-        }
-      });
+    // Load existing preference or default to true
+    chrome.storage.local.get([CUSTOM_STYLING_KEY], (result) => {
+      const isEnabled = result[CUSTOM_STYLING_KEY] !== false; // Default to true
+      toggleCustomStyling.checked = isEnabled;
     });
-  
-    clearLibraryBtn.addEventListener('click', () => {
-      chrome.storage.local.remove([LIBRARY_CACHE_KEY], () => {
-        libraryDisplay.value = "Library cache successfully cleared.\n\nThe extension will re-sync your library the next time you visit a Libro.fm ALC page.";
-      });
+
+    // Save preference on change
+    toggleCustomStyling.addEventListener('change', () => {
+      chrome.storage.local.set({ [CUSTOM_STYLING_KEY]: toggleCustomStyling.checked });
     });
   
     // ==========================================
@@ -66,7 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
   
-  });
+});
 
 // ==========================================
 // SUPPORT & DEBUGGING: Download JSON
@@ -74,7 +59,6 @@ document.addEventListener('DOMContentLoaded', () => {
 document.getElementById('download-btn').addEventListener('click', async () => {
     // Get all your data from storage
     const data = await chrome.storage.local.get([
-        'libro_owned_books_cache', 
         'libro_genres_cache',
         'libro_debug_logs' // Grab our new logs!
     ]);
@@ -82,7 +66,6 @@ document.getElementById('download-btn').addEventListener('click', async () => {
     // Format the export object
     const exportObject = {
         exportDate: new Date().toISOString(),
-        libraryData: data.libro_owned_books_cache || {},
         genreData: data.libro_genres_cache || {},
         consoleAndNetworkLogs: data.libro_debug_logs || []
     };
@@ -114,7 +97,5 @@ document.addEventListener('DOMContentLoaded', () => {
         // This automatically reads "version": "1.0.x" from manifest.json
         versionElement.textContent = `Libro.fm ALC Helper v${manifestData.version}`;
     }
-
-    // ... (rest of your existing options.js code for buttons) ...
 
 });
