@@ -11,6 +11,9 @@ const SELECTORS = {
     detailPageGenreLinks: '.audiobook-genres a' 
 };
 
+// Get the version from the manifest
+const version = `v${chrome.runtime.getManifest().version}`;
+
 // === CHROME STORAGE PROMISE WRAPPERS ===
 function getStorage(key) {
     return new Promise(resolve => {
@@ -55,21 +58,25 @@ const DebugLogger = {
 
     // Public Methods
     log: function(message, data = null) {
+        message = `[ALC Helper] ${version} ${message}`;
         this._record('LOG', message, data);
         console.log(`[LibroALC LOG] ${message}`, data ? data : '');
     },
 
     info: function(message, data = null) {
+        message = `[ALC Helper] ${version} ${message}`;
         this._record('INFO', message, data);
         console.info(`[LibroALC INFO] ${message}`, data ? data : '');
     },
 
     warn: function(message, data = null) {
+        message = `[ALC Helper] ${version} ${message}`;
         this._record('WARN', message, data);
         console.warn(`[LibroALC WARN] ${message}`, data ? data : '');
     },
 
     error: function(message, data = null) {
+        message = `[ALC Helper] ${version} ${message}`;
         this._record('ERROR', message, data);
         console.error(`[LibroALC ERROR] ${message}`, data ? data : '');
     },
@@ -91,7 +98,7 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
         const genresCleared = changes.libro_genres_cache && !changes.libro_genres_cache.newValue;
 
         if (styleChanged || genresCleared) {
-            DebugLogger.log("[ALC Helper] Storage change detected (style toggle or genre cache clear).");
+            DebugLogger.log("Storage change detected (style toggle or genre cache clear).");
             
             // If the tab is currently visible, reload immediately. 
             // If hidden, flag it to reload when the user comes back.
@@ -107,7 +114,7 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
 // Wait for the user to switch back to the Libro.fm tab before fetching
 document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && needsRefresh) {
-        DebugLogger.log("[ALC Helper] Tab became visible. Triggering queued refresh...");
+        DebugLogger.log("Tab became visible. Triggering queued refresh...");
         needsRefresh = false;
         resetAndReload();
     }
@@ -143,7 +150,7 @@ function createOverlay() {
     overlayEl.id = 'alc-checker-overlay';
     
     overlayEl.innerHTML = `
-        <div class="status-text">ALC Helper</div>
+        <div class="status-text">ALC Helper ${version}</div>
         <div class="genre-text">Initializing...</div>
         <button id="alc-settings-btn" class="settings-btn" title="Open Extension Settings">⚙️ Settings</button>
     `;
@@ -151,7 +158,7 @@ function createOverlay() {
 
     // Settings Button Listener
     document.getElementById('alc-settings-btn').addEventListener('click', () => {
-        DebugLogger.log("[ALC Helper] User opened settings page from overlay.");
+        DebugLogger.log("User opened settings page from overlay.");
         chrome.runtime.sendMessage({ action: "openOptionsPage" }); 
     });
 }
@@ -173,7 +180,7 @@ async function init() {
     isProcessing = true;
     
     try {
-        DebugLogger.log("[ALC Helper] Starting up...");
+        DebugLogger.log("Starting up...");
         createOverlay();
         
         // Retrieve the custom styling toggle setting (default to true)
@@ -186,11 +193,11 @@ async function init() {
 
         // Scan ALC page, apply dimming/badges conditionally, and gather URLs for genre fetching
         const alcBooksData = processALCBooks(customStylingEnabled);
-        updateOverlay("ALC Helper", "Fetching genres...");
+        updateOverlay(`ALC Helper ${version}`, "Fetching genres...");
 
         // Fetch and inject genres in the background
         await loadAndInjectGenres(alcBooksData);
-        updateOverlay("ALC Helper", "All genres loaded!");
+        updateOverlay(`ALC Helper ${version}`, "All genres loaded!");
         
     } finally {
         // Unlock when finished so it can run again later if needed
@@ -239,7 +246,7 @@ function processALCBooks(customStylingEnabled) {
             const isOwned = bookNode.classList.contains('book-grid-item--alc-owned');
 
             if (isOwned && customStylingEnabled) {
-                DebugLogger.log(`[ALC Helper] 📚 ALC Match! Applying custom owned styling for ISBN: ${isbn}`);
+                DebugLogger.log(`📚 ALC Match! Applying custom owned styling for ISBN: ${isbn}`);
                 
                 // Add dimming class to the outermost wrapper (.book-grid-item)
                 bookNode.classList.add('already-owned-alc');
@@ -311,7 +318,7 @@ async function loadAndInjectGenres(booksData) {
 
         if (!genres) {
             try {
-                DebugLogger.log(`[ALC Helper] Fetching genres for ISBN: ${book.isbn}...`);
+                DebugLogger.log(`Fetching genres for ISBN: ${book.isbn}...`);
                 const response = await fetch(book.bookUrl);
                 if (response.ok) {
                     const html = await response.text();
@@ -328,13 +335,13 @@ async function loadAndInjectGenres(booksData) {
                 
                 await new Promise(r => setTimeout(r, 400));
             } catch (err) {
-                DebugLogger.error(`[ALC Helper] Failed to fetch genres for ${book.isbn}`, err);
+                DebugLogger.error(`Failed to fetch genres for ${book.isbn}`, err);
                 genres = [];
             }
         }
 
         fetchedCount++;
-        updateOverlay("ALC Helper", `Genres loaded: ${fetchedCount}/${booksData.length}`);
+        updateOverlay(`ALC Helper ${version}`, `Genres loaded: ${fetchedCount}/${booksData.length}`);
 
         if (genres && genres.length > 0) {
             let currentBookElement = book.bookNode;

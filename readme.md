@@ -5,21 +5,17 @@ A lightweight Google Chrome extension (Manifest V3) that automatically checks th
 No more accidentally clicking on books you've already claimed, and easily spot the genres you love at a glance!
 
 ## ✨ Features
-* **Automatic Detection:** Scans your Libro.fm library and pre-orders in the background, using an ultra-fast O(1) ISBN Hash Table to compare against the ALC page.
-* **Pre-order Support:** Now seamlessly checks your active pre-orders alongside your standard library.
-* **Visual Badge:** Greys out owned audiobooks and overlays a highly visible "Already in Library" badge centered on the cover so you can easily skip them. Hovering over a book smoothly reveals the cover underneath.
 * **Color-Coded Genres:** Asynchronously fetches and injects genre tags for every book on the ALC page, uniquely color-coded for quick visual sorting.
-* **Smart Caching & Sync:** Saves your library data locally (`chrome.storage.local`) for 24 hours. Features interrupted-fetch protection to prevent partial cache bugs.
-* **Options Dashboard:** Click the extension icon in your Chrome toolbar to open a dedicated Options page to manage your cache, get support, or export diagnostic data.
+* **(Optional) Visual Badge:** Greys out owned audiobooks and overlays a highly visible "Already in Library" badge centered on the cover so you can easily skip them. Hovering over a book smoothly reveals the cover underneath. This affect can be disabled in the Settings.
+* **Smart Caching & Sync:** Saves genre data locally (`chrome.storage.local`) for 24 hours. Features interrupted-fetch protection to prevent partial cache bugs.
+* **Options Dashboard:** Click the extension icon in your Chrome toolbar to open a dedicated Settings page to manage your cache, get support, or export diagnostic data.
 * **Privacy First:** 100% local. No data is sent to external servers. It only uses your active, logged-in Libro.fm session.
 
 ## 🚀 Installation 
 
 ### Option 1: Chrome Web Store (Recommended)
-*(Note: Currently pending Web Store approval - link coming soon!)*
-1. Visit the **Libro.fm ALC Helper** page on the Chrome Web Store.
+1. Visit the [**Libro.fm ALC Helper**](https://chromewebstore.google.com/detail/alc-helper-for-librofm/iklfkcdlnippbfaopahopbdbklkklkaa?authuser=0&hl=en) page on the Chrome Web Store.
 2. Click **Add to Chrome**.
-3. Pin the extension to your toolbar for easy access to the Settings page.
 
 ### Option 2: Manual Installation (Developer Mode)
 If you prefer to load the extension directly from the source code:
@@ -32,16 +28,14 @@ If you prefer to load the extension directly from the source code:
 
 ## 📖 How to Use
 1. Log into your account on [Libro.fm](https://libro.fm).
-2. Navigate to an ALC playlist page (e.g., `https://libro.fm/playlists/alc`).
+2. Navigate to an ALC playlist page (e.g., `https://libro.fm/pub-list/bookseller-alcs`).
 3. A small status box will appear at the top of the screen. 
-4. **First Run:** It will quickly page through your library to build a cache. Once complete, owned books will instantly turn grey, and genre tags will pop in below the book titles.
-5. **Updating:** If you claim a new audiobook, simply click the **↻ Refresh Library** button in the on-screen overlay to update your cache.
-6. **Settings:** Click the Libro.fm ALC Helper icon in your Chrome Extensions toolbar at any time to open the Options page.
+4. **Per Page** It will quickly load genre tags for each book on the page. This is cached and will not query again unless the cache is cleared from the Settings page.
+6. **Settings:** Click the Settings button on the status box, or the Libro.fm ALC Helper icon in your Chrome Extensions toolbar at any time to open the Options page.
 
 ## 🛠️ Technical Details
 * **Manifest V3:** Built using the latest modern Chrome Extension standards including Service Workers.
 * **Strict Least-Privilege Permissions:** Only requires `storage` and host permissions for `https://libro.fm/*`.
-* **Rich Data Mapping:** The cache maps ISBNs to specific book titles and sources (e.g., "Library Page 2" or "Preorder") for highly accurate debugging.
 * **Polite Fetching:** Built-in 400ms delays when fetching genres to ensure Libro.fm's servers are respected and never spammed.
 * **Custom Logger:** Captures up to 500 extension-specific background events locally to assist with easy debugging.
 
@@ -60,11 +54,11 @@ If you'd like to contribute to the code or build the production-ready ZIP file y
 To generate a production-ready package for the Chrome Web Store:
 ```bash
 npm run build
+```
 
 ### 🎛️ Extension Options & Troubleshooting
 Instead of relying on developer console commands, everything you need to manage and troubleshoot the extension is built right into the Options page! 
 
-* **Clear Library Cache:** Forces the extension to forget your owned books, triggering a completely fresh scan of your library the next time you visit Libro.fm.
 * **Clear Genre Cache:** Wipes the locally stored genres, forcing the extension to re-fetch the latest genre tags from the audiobook pages.
 * **Download Data for Support:** Having issues? Click this button to instantly generate a `.json` diagnostic file containing your local cache states and custom extension logs. You can attach this file when reaching out for help.
 
@@ -80,4 +74,5 @@ Feel free to open an issue or submit a pull request if you have ideas for improv
 This is an unofficial, community-driven tool. It is not affiliated with Libro.fm. All product names, trademarks, and registered trademarks are property of their respective owners.
 
 ## 🤖 Acknowledgments
+* Thank you, first, to Libro.fm for offering the ALC program for booksellers. Being able to listen to upcoming titles without breaking the bank helps us to be able to refer both audio and print options of stand out books.
 * This extension was developed with the coding assistance of Google's **Gemini Pro** AI, which assisted with the Manifest V3 Service Worker setup, ISBN Hash Table implementation, DOM traversal logic, asynchronous polite fetching, custom data export systems, and automated build pipelines.
