@@ -7,7 +7,7 @@ No more accidentally clicking on books you've already claimed, and easily spot t
 ## ✨ Features
 * **Color-Coded Genres:** Asynchronously fetches and injects genre tags for every book on the ALC page, uniquely color-coded for quick visual sorting.
 * **(Optional) Visual Badge:** Greys out owned audiobooks and overlays a highly visible "Already in Library" badge centered on the cover so you can easily skip them. Hovering over a book smoothly reveals the cover underneath. This affect can be disabled in the Settings.
-* **Smart Caching & Sync:** Saves genre data locally (`chrome.storage.local`) for 24 hours. Features interrupted-fetch protection to prevent partial cache bugs.
+* **Smart Caching & Sync:** Saves genre data locally (`chrome.storage.local`) for 30 days. Features interrupted-fetch protection to prevent partial cache bugs.
 * **Options Dashboard:** Click the extension icon in your Chrome toolbar to open a dedicated Settings page to manage your cache, get support, or export diagnostic data.
 * **Privacy First:** 100% local. No data is sent to external servers. It only uses your active, logged-in Libro.fm session.
 

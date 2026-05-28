@@ -1,14 +1,13 @@
 // === CONFIGURATION ===
-const ALC_PAGE_URL_PART = "/pub-list/bookseller-alcs"; 
-const MAX_TEST_PAGES = 999; 
+const ALC_PAGE_URL_PART = "/pub-list/bookseller-alcs";
+const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 // CSS Selectors
 const SELECTORS = {
-    alcBookContainer: '.book-grid-item',       
-    alcBookTitle: 'h2',                             
+    alcBookContainer: '.book-grid-item',
+    alcBookTitle: 'h2',
     alcBookLink: 'a.book',
-    alcPillTarget: 'p.margin-top', 
-    detailPageGenreLinks: '.audiobook-genres a' 
+    detailPageGenreLinks: '.audiobook-genres a'
 };
 
 // Get the version from the manifest
@@ -58,27 +57,27 @@ const DebugLogger = {
 
     // Public Methods
     log: function(message, data = null) {
-        message = `[ALC Helper] ${version} ${message}`;
+        message = `[ALC Helper LOG] ${version} ${message}`;
         this._record('LOG', message, data);
-        console.log(`[LibroALC LOG] ${message}`, data ? data : '');
+        console.log(message, data ? data : '');
     },
 
     info: function(message, data = null) {
-        message = `[ALC Helper] ${version} ${message}`;
+        message = `[ALC Helper INFO] ${version} ${message}`;
         this._record('INFO', message, data);
-        console.info(`[LibroALC INFO] ${message}`, data ? data : '');
+        console.info(message, data ? data : '');
     },
 
     warn: function(message, data = null) {
-        message = `[ALC Helper] ${version} ${message}`;
+        message = `[ALC Helper WARN] ${version} ${message}`;
         this._record('WARN', message, data);
-        console.warn(`[LibroALC WARN] ${message}`, data ? data : '');
+        console.warn(message, data ? data : '');
     },
 
     error: function(message, data = null) {
-        message = `[ALC Helper] ${version} ${message}`;
+        message = `[ALC Helper ERROR] ${version} ${message}`;
         this._record('ERROR', message, data);
-        console.error(`[LibroALC ERROR] ${message}`, data ? data : '');
+        console.error(message, data ? data : '');
     },
 
     clear: function() {
@@ -207,27 +206,28 @@ async function init() {
 
 function processALCBooks(customStylingEnabled) {
     const alcBooks = document.querySelectorAll(SELECTORS.alcBookContainer);
-    const booksToProcess = []; 
+    const booksToProcess = [];
+    let ownedCount = 0;
 
     alcBooks.forEach((bookNode) => {
         // 1. Idempotency: Skip if we've already processed this exact book
         if (bookNode.dataset.alcProcessed === 'true') {
-            return; 
+            return;
         }
 
-        // 2. Smart Link Selection: 
+        // 2. Smart Link Selection:
         const linkNode = bookNode.matches('a') ? bookNode : bookNode.querySelector(SELECTORS.alcBookLink);
-        
+
         let isbn = null;
         let bookUrl = null;
 
         if (linkNode) {
             bookUrl = linkNode.href; // Absolute URL for genre fetching
-            
+
             // Primary ISBN extraction (Regex from href)
             const hrefAttr = linkNode.getAttribute('href') || '';
             const match = hrefAttr.match(/\/audiobooks\/(\d+)/);
-            
+
             if (match && match[1]) {
                 isbn = match[1];
             } else {
@@ -246,11 +246,11 @@ function processALCBooks(customStylingEnabled) {
             const isOwned = bookNode.classList.contains('book-grid-item--alc-owned');
 
             if (isOwned && customStylingEnabled) {
-                DebugLogger.log(`📚 ALC Match! Applying custom owned styling for ISBN: ${isbn}`);
-                
+                ownedCount++;
+
                 // Add dimming class to the outermost wrapper (.book-grid-item)
                 bookNode.classList.add('already-owned-alc');
-                
+
                 // Inject the UI Badge safely
                 if (!bookNode.querySelector('.alc-owned-badge')) {
                     const badge = document.createElement('div');
@@ -267,6 +267,8 @@ function processALCBooks(customStylingEnabled) {
             bookNode.dataset.alcProcessed = 'true';
         }
     });
+
+    DebugLogger.log(`Page scan complete: ${booksToProcess.length} books found, ${ownedCount} already owned.`);
 
     return booksToProcess;
 }
@@ -307,41 +309,45 @@ async function saveGenreCache(cacheData) {
 }
 
 async function loadAndInjectGenres(booksData) {
-    let genreCache = await getGenreCache(); 
+    let genreCache = await getGenreCache();
+    let processedCount = 0;
     let fetchedCount = 0;
 
     for (const book of booksData) {
         // If the process was restarted, stop the old loop from continuing
         if (!isProcessing) return;
 
-        let genres = genreCache[book.isbn];
+        const cachedEntry = genreCache[book.isbn];
+        // Old format is a plain array — treat as expired so it gets re-fetched and migrated
+        const isFresh = cachedEntry && !Array.isArray(cachedEntry) && (Date.now() - cachedEntry.cachedAt) < CACHE_TTL_MS;
+        let genres = isFresh ? cachedEntry.genres : null;
 
         if (!genres) {
             try {
-                DebugLogger.log(`Fetching genres for ISBN: ${book.isbn}...`);
                 const response = await fetch(book.bookUrl);
                 if (response.ok) {
                     const html = await response.text();
                     const parser = new DOMParser();
                     const doc = parser.parseFromString(html, 'text/html');
-                    
+
                     const genreNodes = doc.querySelectorAll(SELECTORS.detailPageGenreLinks);
                     genres = Array.from(genreNodes)
                         .map(n => n.textContent.trim())
                         .filter(text => text.length > 0);
-                    
-                    genreCache[book.isbn] = genres;
+
+                    genreCache[book.isbn] = { genres, cachedAt: Date.now() };
+                    fetchedCount++;
                 }
-                
+
                 await new Promise(r => setTimeout(r, 400));
             } catch (err) {
-                DebugLogger.error(`Failed to fetch genres for ${book.isbn}`, err);
+                DebugLogger.warn(`Failed to fetch genres for ${book.isbn}`, err);
                 genres = [];
             }
         }
 
-        fetchedCount++;
-        updateOverlay(`ALC Helper ${version}`, `Genres loaded: ${fetchedCount}/${booksData.length}`);
+        processedCount++;
+        updateOverlay(`ALC Helper ${version}`, `Genres loaded: ${processedCount}/${booksData.length}`);
 
         if (genres && genres.length > 0) {
             let currentBookElement = book.bookNode;
@@ -385,6 +391,8 @@ async function loadAndInjectGenres(booksData) {
             }
         }
     }
+
+    DebugLogger.log(`Genre fetch complete: ${fetchedCount} fetched from network, ${processedCount - fetchedCount} served from cache, out of ${booksData.length} total books.`);
 
     // Save the updated cache at the end, merging with any concurrent updates
     const latestCache = await getGenreCache();
