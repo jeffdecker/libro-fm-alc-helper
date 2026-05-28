@@ -89,6 +89,7 @@ const DebugLogger = {
 // === SMART RELOAD LOGIC ===
 let needsRefresh = false;
 let isProcessing = false;
+let bookObservers = [];
 
 // Listen for the Options page changing preferences or clearing cache
 chrome.storage.onChanged.addListener((changes, namespace) => {
@@ -112,23 +113,47 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
 
 // Wait for the user to switch back to the Libro.fm tab before fetching
 document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && needsRefresh) {
+    if (document.visibilityState !== 'visible') return;
+
+    if (needsRefresh) {
         DebugLogger.log("Tab became visible. Triggering queued refresh...");
         needsRefresh = false;
         resetAndReload();
+    } else {
+        rescanOwnedBooks();
     }
 });
+
+async function rescanOwnedBooks() {
+    const customStylingEnabled = await getStorage('libro_custom_owned_style') !== false;
+    if (!customStylingEnabled) return;
+
+    const totalBooks = document.querySelectorAll(SELECTORS.alcBookContainer).length;
+    const ownedBooks = document.querySelectorAll(`${SELECTORS.alcBookContainer}.book-grid-item--alc-owned`);
+    let newCount = 0;
+
+    ownedBooks.forEach(bookNode => {
+        if (bookNode.classList.contains('already-owned-alc')) return;
+        newCount++;
+        applyOwnedStyling(bookNode);
+    });
+
+    DebugLogger.log(`Tab focus rescan complete: ${totalBooks} books on page, ${ownedBooks.length} owned, ${newCount} newly styled.`);
+}
 
 // Helper function to clean the UI and restart
 function resetAndReload() {
     if (isProcessing) return; // Prevent double-triggers
+
+    bookObservers.forEach(obs => obs.disconnect());
+    bookObservers = [];
 
     document.querySelectorAll('[data-alc-processed]').forEach(el => el.removeAttribute('data-alc-processed'));
 
     if (overlayEl) {
         updateOverlay("Resetting...");
     }
-    
+
     init();
 }
 // ==========================
@@ -204,6 +229,41 @@ async function init() {
     }
 }
 
+function applyOwnedStyling(bookNode) {
+    bookNode.classList.add('already-owned-alc');
+    if (!bookNode.querySelector('.alc-owned-badge')) {
+        const badge = document.createElement('div');
+        badge.className = 'alc-owned-badge';
+        badge.textContent = 'Already in Library';
+        bookNode.appendChild(badge);
+    }
+}
+
+function observeBookForPurchase(bookNode) {
+    const observer = new MutationObserver((_, obs) => {
+        const isNowOwned = bookNode.classList.contains('book-grid-item--alc-owned') ||
+            Array.from(bookNode.querySelectorAll('button')).some(btn =>
+                btn.textContent.toLowerCase().includes('in your library')
+            );
+
+        if (isNowOwned) {
+            obs.disconnect();
+            applyOwnedStyling(bookNode);
+            DebugLogger.log('In-page purchase detected, applied owned styling.');
+        }
+    });
+
+    observer.observe(bookNode, {
+        attributes: true,
+        attributeFilter: ['class'],
+        subtree: true,
+        childList: true,
+        characterData: true
+    });
+
+    bookObservers.push(observer);
+}
+
 function processALCBooks(customStylingEnabled) {
     const alcBooks = document.querySelectorAll(SELECTORS.alcBookContainer);
     const booksToProcess = [];
@@ -245,18 +305,12 @@ function processALCBooks(customStylingEnabled) {
             // Check if the book is owned (detected via native site class)
             const isOwned = bookNode.classList.contains('book-grid-item--alc-owned');
 
-            if (isOwned && customStylingEnabled) {
-                ownedCount++;
-
-                // Add dimming class to the outermost wrapper (.book-grid-item)
-                bookNode.classList.add('already-owned-alc');
-
-                // Inject the UI Badge safely
-                if (!bookNode.querySelector('.alc-owned-badge')) {
-                    const badge = document.createElement('div');
-                    badge.className = 'alc-owned-badge';
-                    badge.textContent = 'Already in Library';
-                    bookNode.appendChild(badge);
+            if (customStylingEnabled) {
+                if (isOwned) {
+                    ownedCount++;
+                    applyOwnedStyling(bookNode);
+                } else {
+                    observeBookForPurchase(bookNode);
                 }
             }
 
