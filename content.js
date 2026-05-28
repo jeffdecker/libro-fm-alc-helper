@@ -427,20 +427,13 @@ async function loadAndInjectGenres(booksData) {
                     pillContainer.appendChild(pill);
                 });
 
-                // Try to find the book-info div to place genres right underneath it
-                const bookInfo = currentBookElement.querySelector('.book-info');
-                
-                if (bookInfo) {
-                    // Puts the container right below the title/author block
-                    bookInfo.after(pillContainer); 
+                // Place after a.book so genre pills are a direct child of the card,
+                // keeping them outside the dimming/grayscale filter applied to a.book
+                const bookLink = currentBookElement.querySelector('a.book, a[href*="/audiobooks/"]');
+                if (bookLink) {
+                    bookLink.after(pillContainer);
                 } else {
-                    // Fallback: Put it at the bottom of the link tag
-                    const bookLink = currentBookElement.querySelector('a.book, a[href*="/audiobooks/"]');
-                    if (bookLink) {
-                        bookLink.appendChild(pillContainer);
-                    } else {
-                        currentBookElement.appendChild(pillContainer);
-                    }
+                    currentBookElement.appendChild(pillContainer);
                 }
             }
         }

@@ -51,17 +51,22 @@
     /* REMOVED: pointer-events: none; so the user can still click the link */
 }
 
-/* Dim the book contents, but NOT the new DOM-injected badge */
+/* Dim the book contents, but NOT the badge */
 .already-owned-alc > *:not(.alc-owned-badge) {
     filter: grayscale(100%);
     opacity: 0.4;
-    transition: all 0.2s ease; /* Added smooth transition for hover */
+    transition: all 0.2s ease;
 }
 
-/* Added: Hover effect so users know they can still click the book */
-.already-owned-alc:hover > *:not(.alc-owned-badge) {
+/* Hover: partially restore the book, fully restore genre pill colors */
+.already-owned-alc:hover > *:not(.alc-owned-badge):not(.alc-genre-container) {
     filter: grayscale(50%);
     opacity: 0.8;
+}
+
+.already-owned-alc:hover > .alc-genre-container {
+    filter: grayscale(0%);
+    opacity: 1;
 }
 
 /* Badge overlay for owned books (Centered on the square cover) */
