@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            background-color: #222;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        /* Exactly 1400x560 */
+        .promo-container {
+            width: 1400px;
+            height: 560px;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1f1f1f 100%);
+            display: flex;
+            align-items: center;
+            padding: 0 80px;
+            box-sizing: border-box;
+            position: relative;
+            overflow: hidden;
+        }
+        .text-content {
+            width: 45%;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .logo {
+            width: 100px; 
+            border-radius: 5px;
+            margin-bottom: 5px;
+        }
+        h1 {
+            color: #ffffff;
+            font-size: 54px; 
+            margin: 0 0 10px 0;
+            line-height: 1.1;
+        }
+        p {
+            color: #FF9B37; 
+            font-size: 26px; 
+            margin: 0 0 20px 0;
+            font-weight: 500;
+        }
+        .features {
+            color: #cccccc;
+            font-size: 18px; 
+            display: flex;
+            flex-wrap: wrap; /* Allows safe wrapping */
+            gap: 12px; /* Clean spacing between badges */
+        }
+        .features span {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .image-content {
+            position: absolute;
+            right: -60px; 
+            top: 60px; 
+            width: 880px;
+            transform: perspective(1000px) rotateY(-4deg) rotateX(1deg);
+            box-shadow: -15px 15px 40px rgba(0,0,0,0.6);
+            border-radius: 12px;
+            border: 1px solid #333;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="promo-container">
+        <div class="text-content">
+            <img src="../icons/icon48.png" class="logo" alt="Logo">
+            
+            <h1>Libro.fm<br>ALC Helper</h1>
+            <p>Upgrade your listening library.</p>
+            
+            <div class="features">
+                <span>✓ Spots Owned Books</span>
+                <span>✓ Color-Coded Genres</span>
+                <span>✓ 100% Private</span>
+            </div>
+        </div>
+
+        <img src="promo_screenshot.png" class="image-content" alt="Screenshot">
+    </div>
+
+</body>
+</html>

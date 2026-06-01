@@ -1,19 +1,17 @@
 // === CONFIGURATION ===
-const ALC_PAGE_URL_PART = "/pub-list/bookseller-alcs"; 
-const LIBRARY_URL = "https://libro.fm/user/library"; 
-const MAX_TEST_PAGES = 999; 
+const ALC_PAGE_URL_PART = "/pub-list/bookseller-alcs";
+const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 // CSS Selectors
 const SELECTORS = {
-    libraryBookContainer: '.account-list-item',
-    libraryBookTitle: '.account-item-info h3',     
-    libraryBookLink: 'a.book', 
-    alcBookContainer: '.book-grid-item',       
-    alcBookTitle: 'h2',                             
+    alcBookContainer: '.book-grid-item',
+    alcBookTitle: 'h2',
     alcBookLink: 'a.book',
-    alcPillTarget: 'p.margin-top', 
-    detailPageGenreLinks: '.audiobook-genres a' 
+    detailPageGenreLinks: '.audiobook-genres a'
 };
+
+// Get the version from the manifest
+const version = `v${chrome.runtime.getManifest().version}`;
 
 // === CHROME STORAGE PROMISE WRAPPERS ===
 function getStorage(key) {
@@ -59,23 +57,27 @@ const DebugLogger = {
 
     // Public Methods
     log: function(message, data = null) {
+        message = `[ALC Helper LOG] ${version} ${message}`;
         this._record('LOG', message, data);
-        console.log(`[LibroALC LOG] ${message}`, data ? data : '');
+        console.log(message, data ? data : '');
     },
 
     info: function(message, data = null) {
+        message = `[ALC Helper INFO] ${version} ${message}`;
         this._record('INFO', message, data);
-        console.info(`[LibroALC INFO] ${message}`, data ? data : '');
+        console.info(message, data ? data : '');
     },
 
     warn: function(message, data = null) {
+        message = `[ALC Helper WARN] ${version} ${message}`;
         this._record('WARN', message, data);
-        console.warn(`[LibroALC WARN] ${message}`, data ? data : '');
+        console.warn(message, data ? data : '');
     },
 
     error: function(message, data = null) {
+        message = `[ALC Helper ERROR] ${version} ${message}`;
         this._record('ERROR', message, data);
-        console.error(`[LibroALC ERROR] ${message}`, data ? data : '');
+        console.error(message, data ? data : '');
     },
 
     clear: function() {
@@ -87,16 +89,16 @@ const DebugLogger = {
 // === SMART RELOAD LOGIC ===
 let needsRefresh = false;
 let isProcessing = false;
+let bookObservers = [];
 
-// Listen for the Options page clearing the cache
+// Listen for the Options page changing preferences or clearing cache
 chrome.storage.onChanged.addListener((changes, namespace) => {
     if (namespace === 'local') {
-        // Check if either cache was removed (newValue will be undefined)
-        const libraryCleared = changes.libro_owned_books_cache && !changes.libro_owned_books_cache.newValue;
+        const styleChanged = changes.libro_custom_owned_style !== undefined;
         const genresCleared = changes.libro_genres_cache && !changes.libro_genres_cache.newValue;
 
-        if (libraryCleared || genresCleared) {
-            DebugLogger.log("[ALC Helper] Cache clear detected from external source.");
+        if (styleChanged || genresCleared) {
+            DebugLogger.log("Storage change detected (style toggle or genre cache clear).");
             
             // If the tab is currently visible, reload immediately. 
             // If hidden, flag it to reload when the user comes back.
@@ -111,23 +113,47 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
 
 // Wait for the user to switch back to the Libro.fm tab before fetching
 document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && needsRefresh) {
-        DebugLogger.log("[ALC Helper] Tab became visible. Triggering queued refresh...");
+    if (document.visibilityState !== 'visible') return;
+
+    if (needsRefresh) {
+        DebugLogger.log("Tab became visible. Triggering queued refresh...");
         needsRefresh = false;
         resetAndReload();
+    } else {
+        rescanOwnedBooks();
     }
 });
+
+async function rescanOwnedBooks() {
+    const customStylingEnabled = await getStorage('libro_custom_owned_style') !== false;
+    if (!customStylingEnabled) return;
+
+    const totalBooks = document.querySelectorAll(SELECTORS.alcBookContainer).length;
+    const ownedBooks = document.querySelectorAll(`${SELECTORS.alcBookContainer}.book-grid-item--alc-owned`);
+    let newCount = 0;
+
+    ownedBooks.forEach(bookNode => {
+        if (bookNode.classList.contains('already-owned-alc')) return;
+        newCount++;
+        applyOwnedStyling(bookNode);
+    });
+
+    DebugLogger.log(`Tab focus rescan complete: ${totalBooks} books on page, ${ownedBooks.length} owned, ${newCount} newly styled.`);
+}
 
 // Helper function to clean the UI and restart
 function resetAndReload() {
     if (isProcessing) return; // Prevent double-triggers
 
+    bookObservers.forEach(obs => obs.disconnect());
+    bookObservers = [];
+
     document.querySelectorAll('[data-alc-processed]').forEach(el => el.removeAttribute('data-alc-processed'));
 
     if (overlayEl) {
-        updateOverlay("Resetting...", 0);
+        updateOverlay("Resetting...");
     }
-    
+
     init();
 }
 // ==========================
@@ -147,45 +173,28 @@ function createOverlay() {
     overlayEl = document.createElement('div');
     overlayEl.id = 'alc-checker-overlay';
     
-    // Updated button text to "Settings"
     overlayEl.innerHTML = `
-        <div class="status-text">Initializing...</div>
-        <div class="count-text">Loaded: 0 books</div>
-        <div class="genre-text"></div>
-        <button id="alc-reload-btn" class="reload-btn" title="Force refresh library cache">↻ Refresh Library</button>
+        <div class="status-text">ALC Helper ${version}</div>
+        <div class="genre-text">Initializing...</div>
         <button id="alc-settings-btn" class="settings-btn" title="Open Extension Settings">⚙️ Settings</button>
     `;
     document.body.appendChild(overlayEl);
 
-    // Existing Reload Button Listener
-    document.getElementById('alc-reload-btn').addEventListener('click', async () => {
-        DebugLogger.log("[ALC Helper] Manual refresh triggered by user.");
-        // Keep genre cache so previously fetched genres remain available on reload.
-        await removeStorage(['libro_owned_books_cache']);
-    });
-
-    // NEW: Settings Button Listener
+    // Settings Button Listener
     document.getElementById('alc-settings-btn').addEventListener('click', () => {
-        DebugLogger.log("[ALC Helper] User opened settings page from overlay.");
+        DebugLogger.log("User opened settings page from overlay.");
         chrome.runtime.sendMessage({ action: "openOptionsPage" }); 
-        // Note: We still send "openOptionsPage" because that's what Chrome calls the API!
     });
 }
 
-function updateOverlay(status, count, isComplete = false, genreStatus = "") {
+function updateOverlay(status, genreStatus = "") {
     if (!overlayEl) return;
     
-    overlayEl.querySelector('.status-text').textContent = status;
+    if (status) {
+        overlayEl.querySelector('.status-text').textContent = status;
+    }
     if (genreStatus) {
         overlayEl.querySelector('.genre-text').textContent = genreStatus;
-    }
-    
-    if (isComplete) {
-        overlayEl.querySelector('.count-text').textContent = `Library: ${count} books`;
-        overlayEl.querySelector('.reload-btn').style.display = 'block'; 
-    } else {
-        overlayEl.querySelector('.count-text').textContent = `Loaded: ${count} books`;
-        overlayEl.querySelector('.reload-btn').style.display = 'none'; 
     }
 }
 // ----------------------------
@@ -195,30 +204,24 @@ async function init() {
     isProcessing = true;
     
     try {
-        DebugLogger.log("[ALC Helper] Starting up...");
+        DebugLogger.log("Starting up...");
         createOverlay();
         
-        // 1. Get library
-        const ownedBooksMap = await fetchAllLibraryBooks();
-        const ownedCount = Object.keys(ownedBooksMap).length;
-        
-        if (ownedCount === 0) {
-            updateOverlay("Error: No Books Found", 0, true);
-            return; 
-        }
+        // Retrieve the custom styling toggle setting (default to true)
+        const customStylingEnabled = await getStorage('libro_custom_owned_style') !== false;
 
         // Clear previous UI elements before processing new data
         document.querySelectorAll('.already-owned-alc').forEach(el => el.classList.remove('already-owned-alc'));
         document.querySelectorAll('.alc-owned-badge').forEach(el => el.remove());
         document.querySelectorAll('.alc-genre-container').forEach(el => el.remove());
 
-        // 2. Scan ALC page, grey out owned books, and gather URLs for genre fetching
-        const alcBooksData = processALCBooks(ownedBooksMap);
-        updateOverlay("Loading Complete", ownedCount, true, "Fetching genres...");
+        // Scan ALC page, apply dimming/badges conditionally, and gather URLs for genre fetching
+        const alcBooksData = processALCBooks(customStylingEnabled);
+        updateOverlay(`ALC Helper ${version}`, "Fetching genres...");
 
-        // 3. Fetch and inject genres in the background
+        // Fetch and inject genres in the background
         await loadAndInjectGenres(alcBooksData);
-        updateOverlay("Loading Complete", ownedCount, true, "All genres loaded!");
+        updateOverlay(`ALC Helper ${version}`, "All genres loaded!");
         
     } finally {
         // Unlock when finished so it can run again later if needed
@@ -226,241 +229,69 @@ async function init() {
     }
 }
 
-async function fetchAllLibraryBooks() {
-    const cache = await getStorage('libro_owned_books_cache');
-    
-    if (cache) {
-        const twentyFourHours = 24 * 60 * 60 * 1000;
-        if (cache.books && (Date.now() - cache.timestamp < twentyFourHours)) {
-            const cachedCount = Object.keys(cache.books).length;
-            DebugLogger.log(`[ALC Helper] Loaded ${cachedCount} owned books from fast cache.`);
-            updateOverlay("Loading from Cache...", cachedCount);
-            return cache.books;
-        }
+function applyOwnedStyling(bookNode) {
+    bookNode.classList.add('already-owned-alc');
+    if (!bookNode.querySelector('.alc-owned-badge')) {
+        const badge = document.createElement('div');
+        badge.className = 'alc-owned-badge';
+        badge.textContent = 'Already in Library';
+        bookNode.appendChild(badge);
     }
-
-    // --- Pre-calculate total pages ---
-    let totalPages = await getTotalLibraryPages();
-    let totalPagesText = totalPages ? totalPages : "?";
-
-    DebugLogger.log(`[ALC Helper] Fetching library from Libro.fm... Expected pages: ${totalPagesText}`);
-    updateOverlay(`Loading Page 1 of ${totalPagesText}...`, 0);
-    
-    let allBooksMap = {}; 
-    let currentPage = 1;
-    let hasNextPage = true;
-    let fetchSuccessful = true;
-
-    while (hasNextPage) {
-        if (currentPage > MAX_TEST_PAGES) {
-            DebugLogger.log(`[ALC Helper] Testing limit reached: Stopping after ${MAX_TEST_PAGES} pages.`);
-            break;
-        }
-
-        try {
-            // Update overlay with current progress
-            const currentTotal = Object.keys(allBooksMap).length;
-            updateOverlay(`Loading Page ${currentPage} of ${totalPagesText}...`, currentTotal);
-
-            DebugLogger.log(`[ALC Helper] Fetching library page ${currentPage}...`);
-            const response = await fetch(`${LIBRARY_URL}?page=${currentPage}`);
-            
-            if (!response.ok) {
-                DebugLogger.error(`[ALC Helper] Failed to fetch page ${currentPage}.`);
-                fetchSuccessful = false; 
-                break; 
-            }
-
-            const html = await response.text();
-            const doc = new DOMParser().parseFromString(html, 'text/html');
-            const libraryItems = doc.querySelectorAll(SELECTORS.libraryBookContainer);
-            
-            if (libraryItems.length === 0) {
-                DebugLogger.log(`[ALC Helper] No more books found. Reached end of library.`);
-                hasNextPage = false;
-            } else {
-                let booksFoundOnPage = 0;
-
-                libraryItems.forEach(item => {
-                    const titleEl = item.querySelector(SELECTORS.libraryBookTitle);
-                    const linkEl = item.querySelector(SELECTORS.libraryBookLink);
-                    
-                    let title = titleEl ? titleEl.textContent.trim().toLowerCase() : 'Unknown Title';
-                    let isbn = null;
-
-                    if (linkEl) {
-                        const href = linkEl.getAttribute('href');
-                        const match = href.match(/\/audiobooks\/(\d+)/);
-                        if (match) isbn = match[1];
-                    }
-
-                    if (isbn) {
-                        // --- NEW: Store as an object with title and source ---
-                        allBooksMap[isbn] = {
-                            title: title,
-                            source: `Library Page ${currentPage}`
-                        };
-                        booksFoundOnPage++;
-                    } else {
-                        DebugLogger.warn(`[ALC Helper] Skipping book (No ISBN found): ${title}`);
-                    }
-                });
-                
-                DebugLogger.log(`[ALC Helper] Extracted ${booksFoundOnPage} books on page ${currentPage}.`);
-                
-                currentPage++;
-                await new Promise(resolve => setTimeout(resolve, 500));
-            }
-        } catch (error) {
-            if (error.message === 'Failed to fetch' || error.name === 'TypeError') {
-                DebugLogger.warn(`Fetch interrupted on library page ${currentPage}. User navigated away.`);
-            } else {
-                DebugLogger.error(`Error fetching library page ${currentPage}: ${error.toString()}`);
-            }
-            fetchSuccessful = false; 
-            break; 
-        }
-    }
-
-    // --- Fetch Pre-orders if main library fetched successfully ---
-    if (fetchSuccessful) {
-        try {
-            updateOverlay(`Checking Pre-orders...`, Object.keys(allBooksMap).length);
-            const preordersMap = await fetchPreorderBooks();
-            
-            // Merge pre-orders into the main library map
-            Object.assign(allBooksMap, preordersMap);
-        } catch (error) {
-            // If the user navigates away DURING the pre-order check, we abort the save.
-            fetchSuccessful = false; 
-        }
-    }
-
-    if (fetchSuccessful) {
-        const cacheData = {
-            timestamp: Date.now(),
-            books: allBooksMap
-        };
-        
-        await setStorage('libro_owned_books_cache', cacheData);
-        DebugLogger.log(`[ALC Helper] SUCCESS! Saved ${Object.keys(allBooksMap).length} total books (Library + Pre-orders) to cache.`);
-    } else {
-        DebugLogger.warn(`[ALC Helper] Fetch aborted. Cache was NOT updated to prevent saving incomplete data.`);
-    }
-
-    return allBooksMap;
 }
 
-async function fetchPreorderBooks() {
-    let preordersMap = {};
-    try {
-        const response = await fetch('https://libro.fm/user/preorders');
-        
-        if (!response.ok) {
-            DebugLogger.warn(`[ALC Helper] No preorders found or failed to load preorders page.`);
-            return preordersMap;
+function observeBookForPurchase(bookNode) {
+    const observer = new MutationObserver((_, obs) => {
+        const isNowOwned = bookNode.classList.contains('book-grid-item--alc-owned') ||
+            Array.from(bookNode.querySelectorAll('button')).some(btn =>
+                btn.textContent.toLowerCase().includes('in your library')
+            );
+
+        if (isNowOwned) {
+            obs.disconnect();
+            applyOwnedStyling(bookNode);
+            DebugLogger.log('In-page purchase detected, applied owned styling.');
         }
+    });
 
-        const html = await response.text();
-        const doc = new DOMParser().parseFromString(html, 'text/html');
-        const preorderItems = doc.querySelectorAll(SELECTORS.libraryBookContainer);
+    observer.observe(bookNode, {
+        attributes: true,
+        attributeFilter: ['class'],
+        subtree: true,
+        childList: true,
+        characterData: true
+    });
 
-        preorderItems.forEach(item => {
-            const titleEl = item.querySelector(SELECTORS.libraryBookTitle);
-            const linkEl = item.querySelector(SELECTORS.libraryBookLink);
-            
-            let title = titleEl ? titleEl.textContent.trim().toLowerCase() : 'Unknown Title';
-            let isbn = null;
-
-            if (linkEl) {
-                const href = linkEl.getAttribute('href');
-                const match = href.match(/\/audiobooks\/(\d+)/);
-                if (match) isbn = match[1];
-            }
-
-            if (isbn) {
-                // --- NEW: Store preorders with the "Preorder" source ---
-                preordersMap[isbn] = {
-                    title: title,
-                    source: "Preorder"
-                };
-            }
-        });
-
-        DebugLogger.log(`[ALC Helper] Extracted ${Object.keys(preordersMap).length} preorders.`);
-    } catch (error) {
-        if (error.message === 'Failed to fetch' || error.name === 'TypeError') {
-            DebugLogger.warn(`Fetch interrupted on preorders. User navigated away.`);
-            throw error; // Throw so fetchAllLibraryBooks knows the fetch wasn't successful
-        } else {
-            DebugLogger.error(`Error fetching preorders: ${error.toString()}`);
-        }
-    }
-
-    return preordersMap;
+    bookObservers.push(observer);
 }
 
-
-/**
- * Fetches the /user page, finds the "See entire library (XXX)" button, 
- * and calculates how many pages we need to fetch (20 books per page).
- */
-async function getTotalLibraryPages() {
-    try {
-        const response = await fetch('https://libro.fm/user');
-        if (!response.ok) return null;
-        
-        const html = await response.text();
-        const doc = new DOMParser().parseFromString(html, 'text/html');
-        
-        // Find the specific link to the library
-        const libraryLinks = Array.from(doc.querySelectorAll('a[href="/user/library"]'));
-        const entireLibraryLink = libraryLinks.find(a => a.textContent.includes('See entire library'));
-        
-        if (entireLibraryLink) {
-            // Extract the number from "See entire library (152)"
-            const match = entireLibraryLink.textContent.match(/\((\d+)\)/);
-            if (match) {
-                const totalBooks = parseInt(match[1], 10);
-                const totalPages = Math.ceil(totalBooks / 20);
-                DebugLogger.log(`[ALC Helper] Found total books: ${totalBooks}. Calculated pages: ${totalPages}`);
-                return totalPages;
-            }
-        }
-    } catch (error) {
-        DebugLogger.warn(`[ALC Helper] Could not pre-calculate total pages: ${error.toString()}`);
-    }
-    return null; // Return null if it fails, so we can fallback to "?"
-}
-
-function processALCBooks(ownedBooksMap) {
+function processALCBooks(customStylingEnabled) {
     const alcBooks = document.querySelectorAll(SELECTORS.alcBookContainer);
-    const booksToProcess = []; 
+    const booksToProcess = [];
+    let ownedCount = 0;
 
     alcBooks.forEach((bookNode) => {
         // 1. Idempotency: Skip if we've already processed this exact book
         if (bookNode.dataset.alcProcessed === 'true') {
-            return; 
+            return;
         }
 
-        // 2. Smart Link Selection: 
-        // Handles both cases: if bookNode is the <a>, OR if it contains the <a>
+        // 2. Smart Link Selection:
         const linkNode = bookNode.matches('a') ? bookNode : bookNode.querySelector(SELECTORS.alcBookLink);
-        
+
         let isbn = null;
         let bookUrl = null;
 
         if (linkNode) {
             bookUrl = linkNode.href; // Absolute URL for genre fetching
-            
+
             // Primary ISBN extraction (Regex from href)
             const hrefAttr = linkNode.getAttribute('href') || '';
             const match = hrefAttr.match(/\/audiobooks\/(\d+)/);
-            
+
             if (match && match[1]) {
                 isbn = match[1];
             } else {
-                // BACKUP: If URL structure changes, try grabbing it from the Quick Look button!
+                // BACKUP: grab it from the Quick Look button
                 const quickLookBtn = bookNode.querySelector('button[data-open^="book-"]');
                 if (quickLookBtn) {
                     const btnMatch = quickLookBtn.getAttribute('data-open').match(/book-(\d+)/);
@@ -471,32 +302,27 @@ function processALCBooks(ownedBooksMap) {
 
         // Only process if we successfully parsed an ISBN
         if (isbn && bookUrl) {
-            let isOwned = !!ownedBooksMap[isbn];
+            // Check if the book is owned (detected via native site class)
+            const isOwned = bookNode.classList.contains('book-grid-item--alc-owned');
 
-            if (isOwned) {
-                DebugLogger.log(`[ALC Helper] 📚 ALC Match! Greyed out ISBN: ${isbn} (Library Title: "${ownedBooksMap[isbn].title}")`);
-                
-                // Add dimming class to the outermost wrapper (.book-grid-item)
-                bookNode.classList.add('already-owned-alc');
-                
-                // 3. Inject the UI Badge safely
-                if (!bookNode.querySelector('.alc-owned-badge')) {
-                    const badge = document.createElement('div');
-                    badge.className = 'alc-owned-badge';
-                    badge.textContent = 'Already in Library';
-                    
-                    // Since bookNode is a <div> (.book-grid-item), this is DOM-safe!
-                    bookNode.appendChild(badge);
+            if (customStylingEnabled) {
+                if (isOwned) {
+                    ownedCount++;
+                    applyOwnedStyling(bookNode);
+                } else {
+                    observeBookForPurchase(bookNode);
                 }
             }
 
-            // 4. Queue up for Genre Fetching
+            // Queue up for Genre Fetching
             booksToProcess.push({ isbn, bookUrl, bookNode });
 
             // Mark this node as processed so we don't process it again on scroll/DOM mutation
             bookNode.dataset.alcProcessed = 'true';
         }
     });
+
+    DebugLogger.log(`Page scan complete: ${booksToProcess.length} books found, ${ownedCount} already owned.`);
 
     return booksToProcess;
 }
@@ -537,44 +363,45 @@ async function saveGenreCache(cacheData) {
 }
 
 async function loadAndInjectGenres(booksData) {
-    let genreCache = await getGenreCache(); 
+    let genreCache = await getGenreCache();
+    let processedCount = 0;
     let fetchedCount = 0;
 
     for (const book of booksData) {
         // If the process was restarted, stop the old loop from continuing
         if (!isProcessing) return;
 
-        let genres = genreCache[book.isbn];
+        const cachedEntry = genreCache[book.isbn];
+        // Old format is a plain array — treat as expired so it gets re-fetched and migrated
+        const isFresh = cachedEntry && !Array.isArray(cachedEntry) && (Date.now() - cachedEntry.cachedAt) < CACHE_TTL_MS;
+        let genres = isFresh ? cachedEntry.genres : null;
 
         if (!genres) {
             try {
-                DebugLogger.log(`[ALC Helper] Fetching genres for ISBN: ${book.isbn}...`);
                 const response = await fetch(book.bookUrl);
                 if (response.ok) {
                     const html = await response.text();
                     const parser = new DOMParser();
                     const doc = parser.parseFromString(html, 'text/html');
-                    
+
                     const genreNodes = doc.querySelectorAll(SELECTORS.detailPageGenreLinks);
                     genres = Array.from(genreNodes)
                         .map(n => n.textContent.trim())
                         .filter(text => text.length > 0);
-                    
-                    genreCache[book.isbn] = genres;
+
+                    genreCache[book.isbn] = { genres, cachedAt: Date.now() };
+                    fetchedCount++;
                 }
-                
+
                 await new Promise(r => setTimeout(r, 400));
             } catch (err) {
-                DebugLogger.error(`[ALC Helper] Failed to fetch genres for ${book.isbn}`, err);
+                DebugLogger.warn(`Failed to fetch genres for ${book.isbn}`, err);
                 genres = [];
             }
         }
 
-        fetchedCount++;
-        
-        const libraryCache = await getStorage('libro_owned_books_cache');
-        const libraryCount = libraryCache ? Object.keys(libraryCache.books || {}).length : 0;
-        updateOverlay("Loading Complete", libraryCount, true, `Genres loaded: ${fetchedCount}/${booksData.length}`);
+        processedCount++;
+        updateOverlay(`ALC Helper ${version}`, `Genres loaded: ${processedCount}/${booksData.length}`);
 
         if (genres && genres.length > 0) {
             let currentBookElement = book.bookNode;
@@ -600,25 +427,19 @@ async function loadAndInjectGenres(booksData) {
                     pillContainer.appendChild(pill);
                 });
 
-                // --- NEW INJECTION LOGIC ---
-                // Try to find the book-info div to place genres right underneath it
-                const bookInfo = currentBookElement.querySelector('.book-info');
-                
-                if (bookInfo) {
-                    // Puts the container right below the title/author block
-                    bookInfo.after(pillContainer); 
+                // Place after a.book so genre pills are a direct child of the card,
+                // keeping them outside the dimming/grayscale filter applied to a.book
+                const bookLink = currentBookElement.querySelector('a.book, a[href*="/audiobooks/"]');
+                if (bookLink) {
+                    bookLink.after(pillContainer);
                 } else {
-                    // Fallback: Put it at the bottom of the link tag
-                    const bookLink = currentBookElement.querySelector('a.book, a[href*="/audiobooks/"]');
-                    if (bookLink) {
-                        bookLink.appendChild(pillContainer);
-                    } else {
-                        currentBookElement.appendChild(pillContainer);
-                    }
+                    currentBookElement.appendChild(pillContainer);
                 }
             }
         }
     }
+
+    DebugLogger.log(`Genre fetch complete: ${fetchedCount} fetched from network, ${processedCount - fetchedCount} served from cache, out of ${booksData.length} total books.`);
 
     // Save the updated cache at the end, merging with any concurrent updates
     const latestCache = await getGenreCache();

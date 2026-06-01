@@ -21,6 +21,7 @@
             <h3>Contents</h3>
             <ul class="toc-list">
                 <li><a href="#how-it-works">How It Works</a></li>
+                <li><a href="#preferences">Preferences</a></li>
                 <li><a href="#data-management">Data Management</a></li>
                 <li><a href="#support-debugging">Support & Debugging</a></li>
                 <li><a href="#about">About & Contact</a></li>
@@ -37,13 +38,14 @@
             <h2>What this extension does:</h2>
             <ul>
               <li>
-                <strong>Identifies Owned Books:</strong> When you view a monthly ALC list, it loads your library and grays out any books you have already purchased.
-                <span class="note"><strong>Note:</strong> Your library may take some time to load initially, but once complete, it is saved locally for 24 hours and applied instantly to any other ALC pages you visit.</span>
-                <img src="images/already-in-library.png" alt="Example showing a greyed out book already in your library" class="preview-image">
+                <strong>Adds Genre Tags:</strong> Looks at the books on the current ALC page and appends their genre tags directly to the listing for easy reference.
+                <span class="note"><strong>Note:</strong> Loading the genres can take a moment. The Status popup will show the progress.</span>
+                <img src="images/colorful-genres.png" alt="Example showing colorful genre tags added to an audiobook listing" class="preview-image">
               </li>
               <li>
-                <strong>Adds Genre Tags:</strong> It looks at the books on the current ALC page and appends their specific genre tags directly to the listing for easy reference.
-                <img src="images/colorful-genres.png" alt="Example showing colorful genre tags added to an audiobook listing" class="preview-image">
+                <strong>Identifies Owned Books:</strong> Grays out any books you have already purchased on the current ALC page.
+                <span class="note"><strong>Note:</strong> This affect is optional and can be disabled below on this Settings page.</span>
+                <img src="images/already-in-library.png" alt="Example showing a greyed out book already in your library" class="preview-image">
               </li>
             </ul>
           </div>
@@ -53,32 +55,32 @@
             <p>When you visit an ALC page, a small status box will appear in the top right corner of your screen to keep you updated:</p>
             <ul>
               <li>
-                <strong>Library Sync:</strong> Displays whether it is currently loading your library (and how many books it has found so far) or shows the total number of books already loaded. It also includes a "Refresh Library" button so you can manually force an update if you recently acquired a new book.
-              </li>
-              <li>
                 <strong>Genre Tagging:</strong> Indicates whether the extension is actively looking up genre information for the current page, or if it has finished attaching all the genre tags.
               </li>
             </ul>
-            <img src="images/library-and-genre-status.png" alt="Example showing the floating status popup with library and genre loading progress" class="preview-image">
+            <img src="images/status-popup.png" alt="Example showing the floating status popup with library and genre loading progress" class="preview-image">
           </div>
+      </section>
+      
+      <section id="preferences" class="setting-group">
+        <h3>Preferences</h3>
+        <p>Customize the visual display of the extension.</p>
+        
+        <div class="data-section" style="border-top: none; padding-top: 0;">
+          <label class="pref-label" style="display: flex; align-items: center; gap: 10px; font-weight: bold; cursor: pointer; font-size: 1.1em;">
+            <input type="checkbox" id="toggle-custom-styling" checked style="width: 18px; height: 18px; cursor: pointer;">
+            Enable custom dimming and "Already in Library" badge for owned books
+          </label>
+          <span class="note" style="margin-top: 8px;">If enabled, books that you already own will be visually greyed out on the ALC page with a custom badge. If disabled, only the website's default purchased indicator will be shown.</span>
+        </div>
       </section>
       
       <section id="data-management" class="setting-group">
         <h3>Data Management</h3>
         <p>View or clear the cached data that the extension has saved locally.</p>
         
-        <!-- Library Data Section -->
-        <div class="data-section">
-          <h4>Library Data</h4>
-          <div class="button-row">
-            <button id="viewLibraryBtn">View Data</button>
-            <button id="clearLibraryBtn" class="clear-btn">Clear Cache</button>
-          </div>
-          <textarea id="libraryDisplay" class="data-display" readonly placeholder="Click 'View Data' to load your cached library..."></textarea>
-        </div>
-
         <!-- Genre Data Section -->
-        <div class="data-section">
+        <div class="data-section" style="border-top: none; padding-top: 0;">
           <h4>Genre Data</h4>
           <div class="button-row">
             <button id="viewGenreBtn">View Data</button>
@@ -90,7 +92,7 @@
         <!-- Support Section -->
         <div id="support-debugging" class="data-section support-section">
             <h2>Support & Debugging</h2>
-            <p>If you are experiencing issues with books not matching or genres not appearing, you can download your local data to send to the developer. This file contains your cached Library ISBNs and Genre tags.</p>
+            <p>If you are experiencing issues with books not matching or genres not appearing, you can download your local data to send to the developer. This file contains your cached Genre tags and debug logs.</p>
             <div class="button-group">
                 <button id="download-btn" class="primary-btn">Download Data for Support</button>
             </div>
