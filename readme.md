@@ -24,7 +24,7 @@ If you prefer to load the extension directly from the source code:
 3. **Open Chrome Extensions:** Open Google Chrome and type `chrome://extensions/` into your URL bar.
 4. **Enable Developer Mode:** Turn on the **Developer mode** toggle switch in the top right corner.
 5. **Load Unpacked:** Click the **Load unpacked** button in the top left corner.
-6. **Select the folder:** Choose the extracted `libro-alc-checker` folder.
+6. **Select the folder:** Choose the extracted `libro-fm-alc-helper` folder.
 
 ## 📖 How to Use
 1. Log into your account on [Libro.fm](https://libro.fm).
@@ -75,4 +75,4 @@ This is an unofficial, community-driven tool. It is not affiliated with Libro.fm
 
 ## 🤖 Acknowledgments
 * Thank you, first, to Libro.fm for offering the ALC program for booksellers. Being able to listen to upcoming titles without breaking the bank helps us to be able to refer both audio and print options of stand out books.
-* This extension was developed with the coding assistance of Google's **Gemini Pro** AI, which assisted with the Manifest V3 Service Worker setup, ISBN Hash Table implementation, DOM traversal logic, asynchronous polite fetching, custom data export systems, and automated build pipelines.
+* This extension was developed with the coding assistance of Google's **Gemini Pro** and Anthropic's **Claude** AI, which assisted with the Manifest V3 Service Worker setup, ISBN Hash Table implementation, DOM traversal logic, asynchronous polite fetching, custom data export systems, and automated build pipelines.
